@@ -5,7 +5,14 @@ import java.util.ArrayList;
     TODO: refernce like jciv
  */
 
-class Vector2 {}
+class Vector2 {
+    public double x;
+    public double y;
+    public Vector2(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+}
 
 class TileData {
     ArrayList<Rule> rules;
@@ -14,6 +21,20 @@ class TileData {
     public TileData() {
         rules = new ArrayList<Rule>();
         rules.add(new RuleRoadUp());
+    }
+
+    // TODO: If the npc size fits within the npcs, return true, else false
+    public boolean canMove(NPC npc) {
+        return true;
+    }
+
+    public boolean hasRule(Rule rule) {
+        for (Rule r : rules) {
+            if (r.getClass() == rule.getClass()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -42,12 +63,16 @@ class Tiles {
             this.x = x;
         }
 
-        private TileData get() {
+        public TileData get() {
             return tiles[y][x];
         }
 
-        private Tile[] getNeighbors() {
-            return new Tile[]{Tiles.this.get()};
+        public Tile[] getNeighbors() {
+            Tile[] tiles = new Tile[4];
+            for(int i = 0; i < 4; i++) {
+                Tile tile = new Tile(i%2*2-1+x, (i+1)%2*2-1+y);
+            }
+            return tiles;
         }
     }
 }
@@ -57,6 +82,18 @@ class NPC {
     int orientation;
     Vector2 size;
     Tiles.Tile tile;
+
+    public NPC(int orientation, Vector2 size, Tiles.Tile tile) {
+        this.orientation = orientation;
+        this.size = size;
+        this.tile = tile;
+
+        this.tile.get().npcs.add(this);
+    }
+
+    public ArrayList<Tiles.Tile> getMoveableTiles() {
+        
+    }
 
     public int getOrientation() {
         return orientation;
@@ -91,14 +128,41 @@ class NPC {
 */
 
 abstract class Rule {
-    abstract public Tiles.Tile getMovableTiles(NPC npc);
+    abstract public ArrayList<Tiles.Tile> getMovableTiles(NPC npc);
 
 }
 
 // TODO: Probably should be static
 class RuleRoadUp extends Rule {
-    public Tiles.Tile getMovableTiles(NPC npc) {
+    public ArrayList<Tiles.Tile> getMovableTiles(NPC npc) {
         Tiles.Tile tile = npc.getTile();
-        Tiles.Tile neighbors = tile.getNeighbors();
+        Tiles.Tile[] neighbors = tile.getNeighbors();
+        ArrayList<Tiles.Tile> moveableTiles = new ArrayList<Tiles.Tile>();
+
+        for(Tiles.Tile neighbor : neighbors) {
+            if(neighbor.get().canMove(npc)) {
+                if(ruleset(npc, tile)) {
+                    moveableTiles.add(neighbor);
+                }
+            }
+        }
+
+        return moveableTiles;
+    }
+
+    public boolean ruleset(NPC npc, Tiles.Tile tile) {
+        if(npc.orientation == 90 && tile.get().hasRule(this)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Tiles tiles = new Tiles();
+        NPC npc = new NPC(90, new Vector2(0.1, 0.1), tiles.get(10,10));
+
+        npc.getTile().
     }
 }
