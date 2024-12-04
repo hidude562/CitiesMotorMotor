@@ -41,7 +41,10 @@ class TileData {
 
     public TileData() {
         rules = new ArrayList<Rule>();
+        npcs = new ArrayList<NPC>();
         rules.add(new RuleRoadUp());
+        rules.add(new RuleRoadRight());
+
     }
 
     // TODO: If the npc size fits within the npcs, return true, else false
@@ -73,6 +76,10 @@ class TileData {
     public void setNpcs(ArrayList<NPC> npcs) {
         this.npcs = npcs;
     }
+
+    public String toString() {
+        return String.valueOf(npcs.size());
+    }
 }
 
 
@@ -84,15 +91,26 @@ class Tiles {
 
     public Tiles() {
         tiles = new TileData[32][32];
-        for(TileData[] i : tiles) {
-            for(TileData j : i) {
-                j = new TileData();
+        for(int i = 0; i < tiles.length; i++) {
+            for(int j = 0; j < tiles[i].length; j++) {
+                tiles[i][j] = new TileData();
             }
         }
     }
 
     public Tile get(int x, int y) {
         return new Tile(x, y);
+    }
+
+    public String toString() {
+        String b = "";
+        for(int i = 0; i < tiles.length; i++) {
+            for(int j = 0; j < tiles[i].length; j++) {
+                b+=tiles[i][j].toString();
+            }
+            b+="\n";
+        }
+        return b;
     }
 
     class Tile {
@@ -119,7 +137,13 @@ class Tiles {
             }
             return tiles;
         }
+
+        public String toString() {
+            return get().toString();
+        }
     }
+
+
 }
 
 
@@ -139,7 +163,7 @@ class NPC {
         this.tile = tile;
         this.navigation = new ArrayList<Integer>();
 
-        this.tile.get().npcs.add(this);
+        this.tile.get().getNpcs().add(this);
     }
 
     public void navigate() {
@@ -148,7 +172,9 @@ class NPC {
     }
 
     public void move(int x, int y) {
+        this.tile.get().getNpcs().remove(this);
         this.tile = this.tile.getRelative(x,y);
+        this.tile.get().getNpcs().add(this);
     }
 
     public int getOrientation() {
@@ -188,7 +214,6 @@ abstract class Rule {
 // TODO:
 abstract class TileRule {
     abstract public void apply(Tiles.Tile tile);
-
 }
 
 // TODO: static?
@@ -209,7 +234,7 @@ public class Main {
     public static void main(String[] args) {
         Tiles tiles = new Tiles();
         NPC npc = new NPC(90, new Vector2(0.1, 0.1), tiles.get(10,10));
-
-        npc.getTile();
+        for(int i = 0; i < 5; i++) {npc.navigate();}
+        System.out.println(tiles.toString());
     }
 }
