@@ -1,10 +1,26 @@
 import java.util.ArrayList;
 
 /*
-    Tiles apply a set of rules to NPCs
-    TODO: refernce like jciv
+    -- CityMotorMotor --
+    This is a city simulation game that attempts to be as realistic as possible.
+    Like dwarf fortress perhaps.
+
+    It is tile based, and the idea for movement is that each tile can have 1 or more rules,
+    So like a road that goes up would check if the player orientation is 90, then push forward
+    Also, on the same tile, you can have a rotater that flip flops the orientation between 0 and 90 degrees for example
+    The pathfinder forks when there are 2 rules
+
+    For intersections, i haven't massively thought this out yet but something would need to trigger the rest of the
+    filled in intersection with a value or something? This would probably need a different kind of rule because it will
+    always be applied
+
+    This is me thinking about architecture for CityMotorMotor
+    This shall be ported to godot soonish
  */
 
+/*
+    Vector 2 class for godot port
+ */
 class Vector2 {
     public double x;
     public double y;
@@ -14,6 +30,11 @@ class Vector2 {
     }
 }
 
+/*
+    Data stored for each tile
+    Don't instantiate, get a Tiles.Tile from the Tiles class using get()
+    Tiles.Tile is basically a pointer to this but with extra functionality
+ */
 class TileData {
     ArrayList<Rule> rules;
     ArrayList<NPC> npcs;
@@ -36,8 +57,28 @@ class TileData {
         }
         return false;
     }
+
+    public ArrayList<Rule> getRules() {
+        return rules;
+    }
+
+    public void setRules(ArrayList<Rule> rules) {
+        this.rules = rules;
+    }
+
+    public ArrayList<NPC> getNpcs() {
+        return npcs;
+    }
+
+    public void setNpcs(ArrayList<NPC> npcs) {
+        this.npcs = npcs;
+    }
 }
 
+
+/*
+    The tileset. Eventually, this will be 3D. Get individual tiles with get
+ */
 class Tiles {
     TileData[][] tiles;
 
@@ -67,6 +108,10 @@ class Tiles {
             return tiles[y][x];
         }
 
+        public Tile getRelative(int x, int y) {
+            return new Tile(this.x+x, this.y+y);
+        }
+
         public Tile[] getNeighbors() {
             Tile[] tiles = new Tile[4];
             for(int i = 0; i < 4; i++) {
@@ -77,22 +122,33 @@ class Tiles {
     }
 }
 
+
+/*
+     NPC that can move, maybe extendable to more applications?
+ */
 class NPC {
     // 0 -> Right, 90 -> Up, 180 -> Left, 270 -> down
     int orientation;
     Vector2 size;
     Tiles.Tile tile;
+    ArrayList<Integer> navigation;
 
     public NPC(int orientation, Vector2 size, Tiles.Tile tile) {
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
+        this.navigation = new ArrayList<Integer>();
 
         this.tile.get().npcs.add(this);
     }
 
-    public ArrayList<Tiles.Tile> getMoveableTiles() {
-        
+    public void navigate() {
+        int choice = navigation.removeFirst();
+        this.tile.get().getRules().get(choice).apply(this);
+    }
+
+    public void move(int x, int y) {
+        this.tile = this.tile.getRelative(x,y);
     }
 
     public int getOrientation() {
@@ -121,37 +177,28 @@ class NPC {
 }
 
 /*
-    Rules for tiles:
-
-    - For all tiles, if the target tile is not open, do not push direction (Except if it is self)
-    - Some tile need to send signals to others. Like an intersection.
-*/
+    Rule for a tile. Like 'if player rotation == 0 and nlah blaah blah, move player up 2
+ */
 
 abstract class Rule {
-    abstract public ArrayList<Tiles.Tile> getMovableTiles(NPC npc);
+    abstract public void apply(NPC npc);
+}
+
+// Idk? For tiles itself. Like deciding
+// TODO:
+abstract class TileRule {
+    abstract public void apply(Tiles.Tile tile);
 
 }
 
-// TODO: Probably should be static
+// TODO: static?
 class RuleRoadUp extends Rule {
-    public ArrayList<Tiles.Tile> getMovableTiles(NPC npc) {
-        Tiles.Tile tile = npc.getTile();
-        Tiles.Tile[] neighbors = tile.getNeighbors();
-        ArrayList<Tiles.Tile> moveableTiles = new ArrayList<Tiles.Tile>();
-
-        for(Tiles.Tile neighbor : neighbors) {
-            if(neighbor.get().canMove(npc)) {
-                if(ruleset(npc, tile)) {
-                    moveableTiles.add(neighbor);
-                }
-            }
-        }
-
-        return moveableTiles;
+    public void apply(NPC npc) {
+        npc.move(0, -1);
     }
 
-    public boolean ruleset(NPC npc, Tiles.Tile tile) {
-        if(npc.orientation == 90 && tile.get().hasRule(this)) {
+    public boolean canApply(NPC npc) {
+        if(npc.orientation == 90 && npc.getTile().get().hasRule(this)) {
             return true;
         }
         return false;
@@ -163,6 +210,6 @@ public class Main {
         Tiles tiles = new Tiles();
         NPC npc = new NPC(90, new Vector2(0.1, 0.1), tiles.get(10,10));
 
-        npc.getTile().
+        npc.getTile();
     }
 }

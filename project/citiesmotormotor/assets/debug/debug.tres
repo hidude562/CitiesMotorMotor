@@ -1,0 +1,47 @@
+[gd_resource type="TileSet" load_steps=13 format=3 uid="uid://col0r1vlcxtw"]
+
+[ext_resource type="Texture2D" uid="uid://bn4km0vj3doog" path="res://assets/debug/roaddown.png" id="1_8uhps"]
+[ext_resource type="Texture2D" uid="uid://driqbhfmm88x0" path="res://assets/debug/roadleft.png" id="2_8yx13"]
+[ext_resource type="Texture2D" uid="uid://bytsci712vpci" path="res://assets/debug/roadright.png" id="3_c3ff8"]
+[ext_resource type="Texture2D" uid="uid://db4wcoiu74x5v" path="res://assets/debug/roadup.png" id="4_1pgda"]
+[ext_resource type="Texture2D" uid="uid://cyqvy7slndp3i" path="res://assets/debug/crosswalk.png" id="5_xyppw"]
+[ext_resource type="Texture2D" uid="uid://brhg2mjgcrrpq" path="res://assets/debug/intersection.png" id="6_b0lma"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_b1kht"]
+texture = ExtResource("1_8uhps")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_q1syy"]
+texture = ExtResource("2_8yx13")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jfpxn"]
+texture = ExtResource("3_c3ff8")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bxede"]
+texture = ExtResource("4_1pgda")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ccc4b"]
+texture = ExtResource("5_xyppw")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_o2h3n"]
+texture = ExtResource("6_b0lma")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[resource]
+tile_size = Vector2i(32, 32)
+sources/4 = SubResource("TileSetAtlasSource_b1kht")
+sources/5 = SubResource("TileSetAtlasSource_q1syy")
+sources/6 = SubResource("TileSetAtlasSource_jfpxn")
+sources/7 = SubResource("TileSetAtlasSource_bxede")
+sources/8 = SubResource("TileSetAtlasSource_ccc4b")
+sources/9 = SubResource("TileSetAtlasSource_o2h3n")
