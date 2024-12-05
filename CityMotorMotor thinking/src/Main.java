@@ -146,18 +146,23 @@ class Tiles {
 
 }
 
-
-/*
-     NPC that can move, maybe extendable to more applications?
- */
-class NPC {
+class MoveableObject {
     // 0 -> Right, 90 -> Up, 180 -> Left, 270 -> down
     int orientation;
     Vector2 size;
     Tiles.Tile tile;
     ArrayList<Integer> navigation;
+    ArrayList<MoveableObject> carrying;
+    MoveableObject parent;
 
-    public NPC(int orientation, Vector2 size, Tiles.Tile tile) {
+    /*
+        Types it can immitate:
+            0 - General people navigation (sidewalks, parks, etc.)
+            1 - General Vehicle navigation (roads)
+     */
+    int[] travelTypes;
+
+    public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
@@ -169,6 +174,10 @@ class NPC {
     public void navigate() {
         int choice = navigation.removeFirst();
         this.tile.get().getRules().get(choice).apply(this);
+    }
+
+    public boolean navigateTo(Tile t) {
+
     }
 
     public void move(int x, int y) {
@@ -203,11 +212,21 @@ class NPC {
 }
 
 /*
+     NPC that can move, maybe extendable to more applications?
+ */
+class NPC extends MoveableObject {
+
+    public NPC(int orientation, Vector2 size, Tiles.Tile tile) {
+        super(orientation, size, tile);
+    }
+}
+
+/*
     Rule for a tile. Like 'if player rotation == 0 and nlah blaah blah, move player up 2
  */
 
 abstract class Rule {
-    abstract public void apply(NPC npc);
+    abstract public void apply(MoveableObject npc);
 }
 
 // Idk? For tiles itself. Like deciding
@@ -218,12 +237,64 @@ abstract class TileRule {
 
 // TODO: static?
 class RuleRoadUp extends Rule {
-    public void apply(NPC npc) {
+    public void apply(MoveableObject npc) {
         npc.move(0, -1);
     }
 
-    public boolean canApply(NPC npc) {
-        if(npc.orientation == 90 && npc.getTile().get().hasRule(this)) {
+    public boolean canApply(MoveableObject npc) {
+        if(npc.getOrientation() == 90 && npc.getTile().get().hasRule(this)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class RuleRoadRight extends Rule {
+    public void apply(MoveableObject npc) {
+        npc.move(1, 0);
+    }
+
+    public boolean canApply(MoveableObject npc) {
+        if(npc.getOrientation() == 0 && npc.getTile().get().hasRule(this)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class RuleRoadDown extends Rule {
+    public void apply(MoveableObject npc) {
+        npc.move(0, 1);
+    }
+
+    public boolean canApply(MoveableObject npc) {
+        if(npc.getOrientation() == 270 && npc.getTile().get().hasRule(this)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class RuleRoadLeft extends Rule {
+    public void apply(MoveableObject npc) {
+        npc.move(-1, 0);
+    }
+
+    public boolean canApply(MoveableObject npc) {
+        if(npc.getOrientation() == 180 && npc.getTile().get().hasRule(this)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class RuleRoadRotate extends Rule {
+    public void apply(MoveableObject npc) {
+        npc.setOrientation((npc.getOrientation() + 90) % 360);
+    }
+
+    public boolean canApply(MoveableObject npc) {
+        if(       npc.getTile().get().hasRule(this)) {
             return true;
         }
         return false;
