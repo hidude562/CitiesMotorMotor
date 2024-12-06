@@ -1,3 +1,4 @@
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /*
@@ -142,8 +143,39 @@ class Tiles {
             return get().toString();
         }
     }
+}
 
+class Navigation {
+    MoveableObject moveableObject;
+    /*
+        Each choice the moveable object should go with, like turn right, go forward, turn left, etc.
+     */
+    ArrayList<Integer> navigation;
+    ArrayList<Tiles.Tile> navigationTargets;
 
+    public Navigation(MoveableObject moveableObject) {
+        this.navigation = new ArrayList<Integer>();
+        this.navigationTargets = new ArrayList<Tiles.Tile>();
+        this.moveableObject = moveableObject;
+    }
+
+    public void recalculateNavigation() {
+        // TODO:
+    }
+
+    public void addTarget(Tiles.Tile tile) {
+        navigationTargets.add(tile);
+        recalculateNavigation();
+    }
+
+    public int next() {
+        int destinationReached = navigationTargets.indexOf(moveableObject.getTile());
+        if(destinationReached != -1) {
+            navigationTargets.remove(destinationReached);
+        }
+        int choice = navigation.removeFirst();
+        return choice;
+    }
 }
 
 class MoveableObject {
@@ -151,7 +183,9 @@ class MoveableObject {
     int orientation;
     Vector2 size;
     Tiles.Tile tile;
-    ArrayList<Integer> navigation;
+
+    Navigation navigation;
+
     ArrayList<MoveableObject> carrying;
     MoveableObject parent;
 
@@ -166,24 +200,22 @@ class MoveableObject {
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
-        this.navigation = new ArrayList<Integer>();
+        this.navigation = new Navigation(this);
 
         this.tile.get().getNpcs().add(this);
     }
 
     public void navigate() {
-        int choice = navigation.removeFirst();
+        int choice = navigation.next();
         this.tile.get().getRules().get(choice).apply(this);
-    }
-
-    public boolean navigateTo(Tile t) {
-
     }
 
     public void move(int x, int y) {
         this.tile.get().getNpcs().remove(this);
         this.tile = this.tile.getRelative(x,y);
         this.tile.get().getNpcs().add(this);
+
+
     }
 
     public int getOrientation() {
