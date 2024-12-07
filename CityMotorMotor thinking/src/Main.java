@@ -1,5 +1,7 @@
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.PriorityQueue;
 
 /*
     -- CityMotorMotor --
@@ -38,14 +40,16 @@ class Vector2 {
  */
 class TileData {
     ArrayList<Rule> rules;
-    ArrayList<NPC> npcs;
+    ArrayList<MoveableObject> npcs;
 
     public TileData() {
         rules = new ArrayList<Rule>();
-        npcs = new ArrayList<NPC>();
+        npcs = new ArrayList<MoveableObject>();
         rules.add(new RuleRoadUp());
+        rules.add(new RuleRoadLeft());
         rules.add(new RuleRoadRight());
-
+        rules.add(new RuleRoadDown());
+        rules.add(new RuleRoadRotate());
     }
 
     // TODO: If the npc size fits within the npcs, return true, else false
@@ -70,11 +74,11 @@ class TileData {
         this.rules = rules;
     }
 
-    public ArrayList<NPC> getNpcs() {
+    public ArrayList<MoveableObject> getNpcs() {
         return npcs;
     }
 
-    public void setNpcs(ArrayList<NPC> npcs) {
+    public void setNpcs(ArrayList<MoveableObject> npcs) {
         this.npcs = npcs;
     }
 
@@ -90,8 +94,8 @@ class TileData {
 class Tiles {
     TileData[][] tiles;
 
-    public Tiles() {
-        tiles = new TileData[32][32];
+    public Tiles(int x, int y) {
+        tiles = new TileData[y][x];
         for(int i = 0; i < tiles.length; i++) {
             for(int j = 0; j < tiles[i].length; j++) {
                 tiles[i][j] = new TileData();
@@ -99,7 +103,12 @@ class Tiles {
         }
     }
 
+    public boolean inRange(int x, int y) {
+        return (x >= 0 && x < tiles[0].length) && (y >= 0 && y < tiles.length);
+    }
+
     public Tile get(int x, int y) {
+        if(!inRange(x,y)) return null;
         return new Tile(x, y);
     }
 
@@ -115,8 +124,8 @@ class Tiles {
     }
 
     class Tile {
-        private int y;
-        private int x;
+        protected int y;
+        protected int x;
 
         public Tile(int x, int y) {
             this.y = y;
@@ -145,13 +154,44 @@ class Tiles {
     }
 }
 
+/*
+    Credit to Anthropic's Sonnet for implementation.
+
+    This is basically the google maps for your npc, it tells you where to make certain direction choices and allat based off where you wish to go
+ */
+
 class Navigation {
-    MoveableObject moveableObject;
-    /*
-        Each choice the moveable object should go with, like turn right, go forward, turn left, etc.
-     */
-    ArrayList<Integer> navigation;
-    ArrayList<Tiles.Tile> navigationTargets;
+    private MoveableObject moveableObject;
+    protected ArrayList<Integer> navigation;
+    private ArrayList<Tiles.Tile> navigationTargets;
+
+    // For pathfinding
+    private class Node implements Comparable<Node> {
+        Tiles.Tile tile;
+        int orientation;
+        Node parent;
+        int ruleIndex; // Which rule got us here
+        double g; // Cost from start
+        double h; // Heuristic to goal
+
+        public Node(Tiles.Tile tile, int orientation, Node parent, int ruleIndex, double g, double h) {
+            this.tile = tile;
+            this.orientation = orientation;
+            this.parent = parent;
+            this.ruleIndex = ruleIndex;
+            this.g = g;
+            this.h = h;
+        }
+
+        public double f() {
+            return g + h;
+        }
+
+        @Override
+        public int compareTo(Node other) {
+            return Double.compare(this.f(), other.f());
+        }
+    }
 
     public Navigation(MoveableObject moveableObject) {
         this.navigation = new ArrayList<Integer>();
@@ -159,8 +199,89 @@ class Navigation {
         this.moveableObject = moveableObject;
     }
 
+    private double heuristic(Tiles.Tile from, Tiles.Tile to) {
+        // Manhattan distance
+        return Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+    }
+
     public void recalculateNavigation() {
-        // TODO:
+        if (navigationTargets.isEmpty()) return;
+
+        navigation.clear();
+        Tiles.Tile target = navigationTargets.get(0);
+
+        // Priority queue for A*
+        PriorityQueue<Node> openSet = new PriorityQueue<>();
+        HashSet<String> closedSet = new HashSet<>(); // Using string key for tile+orientation
+
+        // Start node
+        Node start = new Node(
+                moveableObject.getTile(),
+                moveableObject.getOrientation(),
+                null,
+                -1,
+                0,
+                heuristic(moveableObject.getTile(), target)
+        );
+
+        openSet.add(start);
+
+        while (!openSet.isEmpty()) {
+            Node current = openSet.poll();
+
+            // Create unique key for this state
+            String stateKey = current.tile.x + "," + current.tile.y + "," + current.orientation;
+
+            if (closedSet.contains(stateKey)) continue;
+            closedSet.add(stateKey);
+
+            // Check if we reached the target
+            if (current.tile.get().equals(target.get())) {
+                // Reconstruct path
+                ArrayList<Integer> path = new ArrayList<>();
+                Node node = current;
+                while (node.parent != null) {
+                    path.add(0, node.ruleIndex);
+                    node = node.parent;
+                }
+                navigation.addAll(path);
+                return;
+            }
+
+            // Try all rules at current tile
+            ArrayList<Rule> rules = current.tile.get().getRules();
+            for (int i = 0; i < rules.size(); i++) {
+                Rule rule = rules.get(i);
+
+                // Create a temporary moveable object to test the rule
+                MoveableObject tempObject = new MoveableObject(
+                        current.orientation,
+                        moveableObject.getSize(),
+                        current.tile
+                );
+
+                // If rule can be applied
+                if (rule.canApply(tempObject)) {
+                    // Apply rule to get new state
+                    rule.apply(tempObject);
+
+                    // Create new node
+                    // Create new node
+                    Node neighbor = new Node(
+                            tempObject.getTile(),
+                            tempObject.getOrientation(),
+                            current,
+                            i,
+                            current.g + 1, // Assume cost of 1 for each move
+                            heuristic(tempObject.getTile(), target)
+                    );
+
+                    openSet.add(neighbor);
+                }
+
+                tempObject.tile.get().getNpcs().remove(tempObject);
+            }
+        }
     }
 
     public void addTarget(Tiles.Tile tile) {
@@ -169,12 +290,19 @@ class Navigation {
     }
 
     public int next() {
-        int destinationReached = navigationTargets.indexOf(moveableObject.getTile());
-        if(destinationReached != -1) {
-            navigationTargets.remove(destinationReached);
+        if (navigation.isEmpty()) {
+            recalculateNavigation();
+            if (navigation.isEmpty()) return -1; // No path found
         }
-        int choice = navigation.removeFirst();
-        return choice;
+
+        int destinationReached = navigationTargets.indexOf(moveableObject.getTile());
+        if (destinationReached != -1) {
+            navigationTargets.remove(destinationReached);
+            recalculateNavigation();
+            if (navigation.isEmpty()) return -1;
+        }
+
+        return navigation.remove(0);
     }
 }
 
@@ -194,13 +322,15 @@ class MoveableObject {
             0 - General people navigation (sidewalks, parks, etc.)
             1 - General Vehicle navigation (roads)
      */
-    int[] travelTypes;
+    ArrayList<Integer> travelTypes;
 
     public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
         this.navigation = new Navigation(this);
+        this.travelTypes = new ArrayList<Integer>();
+        this.travelTypes.add(0);
 
         this.tile.get().getNpcs().add(this);
     }
@@ -258,7 +388,19 @@ class NPC extends MoveableObject {
  */
 
 abstract class Rule {
+    private int applyType = 0;
+
     abstract public void apply(MoveableObject npc);
+
+    public boolean canApply(MoveableObject npc) {
+        if(npc.travelTypes.contains(applyType)) {
+            if(baseRule(npc)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    abstract public boolean baseRule(MoveableObject npc);
 }
 
 // Idk? For tiles itself. Like deciding
@@ -273,7 +415,8 @@ class RuleRoadUp extends Rule {
         npc.move(0, -1);
     }
 
-    public boolean canApply(MoveableObject npc) {
+    public boolean baseRule(MoveableObject npc) {
+        System.out.println(npc.getOrientation());
         if(npc.getOrientation() == 90 && npc.getTile().get().hasRule(this)) {
             return true;
         }
@@ -286,7 +429,7 @@ class RuleRoadRight extends Rule {
         npc.move(1, 0);
     }
 
-    public boolean canApply(MoveableObject npc) {
+    public boolean baseRule(MoveableObject npc) {
         if(npc.getOrientation() == 0 && npc.getTile().get().hasRule(this)) {
             return true;
         }
@@ -299,7 +442,7 @@ class RuleRoadDown extends Rule {
         npc.move(0, 1);
     }
 
-    public boolean canApply(MoveableObject npc) {
+    public boolean baseRule(MoveableObject npc) {
         if(npc.getOrientation() == 270 && npc.getTile().get().hasRule(this)) {
             return true;
         }
@@ -312,7 +455,7 @@ class RuleRoadLeft extends Rule {
         npc.move(-1, 0);
     }
 
-    public boolean canApply(MoveableObject npc) {
+    public boolean baseRule(MoveableObject npc) {
         if(npc.getOrientation() == 180 && npc.getTile().get().hasRule(this)) {
             return true;
         }
@@ -325,7 +468,7 @@ class RuleRoadRotate extends Rule {
         npc.setOrientation((npc.getOrientation() + 90) % 360);
     }
 
-    public boolean canApply(MoveableObject npc) {
+    public boolean baseRule(MoveableObject npc) {
         if(       npc.getTile().get().hasRule(this)) {
             return true;
         }
@@ -335,9 +478,11 @@ class RuleRoadRotate extends Rule {
 
 public class Main {
     public static void main(String[] args) {
-        Tiles tiles = new Tiles();
-        NPC npc = new NPC(90, new Vector2(0.1, 0.1), tiles.get(10,10));
-        for(int i = 0; i < 5; i++) {npc.navigate();}
-        System.out.println(tiles.toString());
+        Tiles tiles = new Tiles(32, 32);
+        NPC npc = new NPC(0, new Vector2(0.1, 0.1), tiles.get(10,10));
+        npc.navigation.addTarget(tiles.get(5, 5));
+        System.out.println(npc.navigation.navigation);
+        for(int i = 0; i < 5; i++) {npc.navigate(); System.out.println(tiles);}
+
     }
 }
