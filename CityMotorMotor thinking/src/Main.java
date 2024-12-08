@@ -306,16 +306,60 @@ class Navigation {
     }
 }
 
+/*
+    This class is used for basically all items, from people (NPC extends this), equipment, vehicles, money, etc.
+
+    What this isn't used for are the ground tiles (Roads, sidewalks, floors).
+
+    Like Tiles, these have an extension of rules you can use for things to transmit
+
+    For example, for a cash register, there are two actionables placed where the customer and worker is. The customer is able to run the actionable if the worker is there, where a navigation path is transmitted and sent back
+
+    I'm thinking about having a class this extends, perhaps AbstractObject that is this, but minus the navigation and tiles
+ */
 class MoveableObject {
+    /*
+        Name, for just displaying to user, not used for identification or anything
+     */
+    String name;
+
     // 0 -> Right, 90 -> Up, 180 -> Left, 270 -> down
     int orientation;
+
+    /*
+        Size (not implemented):
+        How many tiles (or partial tiles) the object occupies
+     */
     Vector2 size;
+
+    /*
+        The tile that the object is on, or, in navigation with vehicles, the exit point
+     */
     Tiles.Tile tile;
 
+    /*
+        Navigation, navigate to anything using this
+     */
     Navigation navigation;
 
+    /*
+        Carrying,
+     */
     ArrayList<MoveableObject> carrying;
+
     MoveableObject parent;
+
+    /*
+            Intended for currency and allat
+         */
+    int numOf;
+
+    /*
+        If same parent or tile, whether or not it is allowed to merge the two. Intended for items like pens or money
+
+        TODO: Implement split method
+     */
+    boolean merge;
 
     /*
         Types it can immitate:
@@ -325,29 +369,44 @@ class MoveableObject {
     ArrayList<Integer> travelTypes;
 
     public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
+        this.name = "Unknown";
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
         this.navigation = new Navigation(this);
         this.travelTypes = new ArrayList<Integer>();
         this.travelTypes.add(0);
+        this.numOf = 1;
+        this.merge = false;
 
-        this.tile.get().getNpcs().add(this);
+        if(this.tile != null)
+            this.tile.get().getNpcs().add(this);
     }
-
+    // Use this to do the next action, for internal class use as it takes time to go from tile to tile so it will eventually be private
     public void navigate() {
         int choice = navigation.next();
         this.tile.get().getRules().get(choice).apply(this);
     }
 
+    // For Rule use
     public void move(int x, int y) {
         this.tile.get().getNpcs().remove(this);
         this.tile = this.tile.getRelative(x,y);
         this.tile.get().getNpcs().add(this);
-
-
     }
 
+    // Count the amount of a class in children
+    public int count(MoveableObject type) {
+        int total = 0;
+        for(MoveableObject has : carrying) {
+            if(has.getClass() == type.getClass()) {
+                total += has.getNumOf();
+            }
+        }
+        return total;
+    }
+
+    // Getters / setters
     public int getOrientation() {
         return orientation;
     }
@@ -371,10 +430,88 @@ class MoveableObject {
     public void setTile(Tiles.Tile tile) {
         this.tile = tile;
     }
+
+    public int getNumOf() {
+        return numOf;
+    }
+
+    public void setNumOf(int val) {
+        this.numOf = val;
+    }
+
+    /*
+        TODO: Not fully implemented
+    */
+
+    public MoveableObject split(int newAmount) {
+        if(newAmount >= this.getNumOf()) {
+            try {
+                Class<? extends MoveableObject> moveableObject = this.getClass();
+                MoveableObject split = moveableObject.newInstance();
+                split.setNumOf(newAmount);
+                this.setNumOf(this.getNumOf() - newAmount);
+                return split;
+            } catch(Exception e) {
+
+            }
+        }
+        return null;
+    }
+
+    /*
+        Reparents object, removing references
+     */
+    public void reparent(MoveableObject to) {
+        this.parent.carrying.remove(this);
+        this.parent = to;
+        this.parent.carrying.add(this);
+    }
+
+    /*
+        Take an amount of object and give it to another movable object
+        Returns true if it were able to transfer given amount
+     */
+    public boolean takeAndGive(MoveableObject wants, MoveableObject to) {
+        ArrayList<MoveableObject> toTransfer = new ArrayList<>();
+        int numHas = 0;
+        for(MoveableObject has : carrying) {
+            if(has.getClass() == wants.getClass()) {
+                toTransfer.add(has);
+                // Split if too many of item
+                if(numHas + has.getNumOf() > wants.getNumOf()) {
+                    MoveableObject partial = this.split(wants.getNumOf() - numHas);
+                    toTransfer.add(partial);
+                    numHas = wants.getNumOf();
+
+                }
+
+                if(numHas + has.getNumOf() >= wants.getNumOf()) {
+                    // Remove from self and add to to
+                    for (MoveableObject obj : toTransfer) {
+                        obj.reparent(to);
+                    }
+                    return true;
+                }
+
+                numHas += has.getNumOf();
+                toTransfer.add(has);
+            }
+        }
+        return false;
+    }
+}
+
+class Money extends MoveableObject {
+    public Money(Tiles.Tile tile, int num) {
+        super(0, new Vector2(0.0, 0.0), tile);
+        this.name = "Money";
+        this.numOf = num;
+    }
 }
 
 /*
-     NPC that can move, maybe extendable to more applications?
+     An NPC is a MoveableObject that is able to move on its own?
+     (That is what i am leaning towards)
  */
 class NPC extends MoveableObject {
 
@@ -384,7 +521,15 @@ class NPC extends MoveableObject {
 }
 
 /*
+    The base rule class which there are extensions of (Like actionable)
+    This is very powerful and basically the whole game will/is going to be powered by this and classes
+    extended by it.
+
+
     Rule for a tile. Like 'if player rotation == 0 and nlah blaah blah, move player up 2
+    For tile navigation
+
+    Perhaps this class should be static? I'm leaving it as instance base for now due to actionable actually needing to not be static
  */
 
 abstract class Rule {
@@ -403,13 +548,53 @@ abstract class Rule {
     abstract public boolean baseRule(MoveableObject npc);
 }
 
-// Idk? For tiles itself. Like deciding
-// TODO:
+
+/*
+    An extension of Rule emitted to specific tiles and are supposed to be used for interactions for NPCs/MoveableObjects to MoveableObjects
+    Example:
+        Choice to open button for door,
+        Cash register for a restraunt, tile.y + 1 buys and transmit a message to worker or something which alters navigation stack
+
+    This should also be rotatable
+
+ */
+abstract class Actionable extends Rule {
+    protected MoveableObject hostObject;
+    public Actionable(MoveableObject hostObject) {this.hostObject = hostObject;}
+    public MoveableObject getHostObject() {return hostObject;}
+}
+
+class CashierCustomer extends Actionable {
+    private MoveableObject cost;
+
+    public CashierCustomer(MoveableObject hostObject) {
+        super(hostObject);
+        cost = new Money(null, 10);
+    }
+
+    public void apply(MoveableObject npc) {
+        npc.takeAndGive(cost, hostObject);
+    }
+
+    public boolean baseRule(MoveableObject npc) {
+        System.out.println(npc.getOrientation());
+        if(npc.count(cost) > cost.getNumOf()) {
+            return true;
+        }
+        return false;
+    }
+
+
+}
+
+/*
+    Not used yet but intended for tings like tile decay which could be potholes, or maybe buildings collapsing
+ */
+
 abstract class TileRule {
     abstract public void apply(Tiles.Tile tile);
 }
 
-// TODO: static?
 class RuleRoadUp extends Rule {
     public void apply(MoveableObject npc) {
         npc.move(0, -1);
