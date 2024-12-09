@@ -22,7 +22,7 @@ import java.util.PriorityQueue;
  */
 
 /*
-    Vector 2 class for godot port
+    Vector 2 class for godot port for easier rewriting
  */
 class Vector2 {
     public double x;
@@ -39,8 +39,8 @@ class Vector2 {
     Tiles.Tile is basically a pointer to this but with extra functionality
  */
 class TileData {
-    ArrayList<Rule> rules;
-    ArrayList<MoveableObject> npcs;
+    private ArrayList<Rule> rules;
+    private ArrayList<MoveableObject> npcs;
 
     public TileData() {
         rules = new ArrayList<Rule>();
@@ -92,7 +92,7 @@ class TileData {
     The tileset. Eventually, this will be 3D. Get individual tiles with get
  */
 class Tiles {
-    TileData[][] tiles;
+    private TileData[][] tiles;
 
     public Tiles(int x, int y) {
         tiles = new TileData[y][x];
@@ -162,7 +162,7 @@ class Tiles {
 
 class Navigation {
     private MoveableObject moveableObject;
-    protected ArrayList<Integer> navigation;
+    private ArrayList<Integer> navigation;
     private ArrayList<Tiles.Tile> navigationTargets;
 
     // For pathfinding
@@ -279,7 +279,7 @@ class Navigation {
                     openSet.add(neighbor);
                 }
 
-                tempObject.tile.get().getNpcs().remove(tempObject);
+                tempObject.getTile().get().getNpcs().remove(tempObject);
             }
         }
     }
@@ -304,6 +304,30 @@ class Navigation {
 
         return navigation.remove(0);
     }
+
+    public MoveableObject getMoveableObject() {
+        return moveableObject;
+    }
+
+    public void setMoveableObject(MoveableObject moveableObject) {
+        this.moveableObject = moveableObject;
+    }
+
+    public ArrayList<Integer> getNavigation() {
+        return navigation;
+    }
+
+    public void setNavigation(ArrayList<Integer> navigation) {
+        this.navigation = navigation;
+    }
+
+    public ArrayList<Tiles.Tile> getNavigationTargets() {
+        return navigationTargets;
+    }
+
+    public void setNavigationTargets(ArrayList<Tiles.Tile> navigationTargets) {
+        this.navigationTargets = navigationTargets;
+    }
 }
 
 /*
@@ -321,52 +345,52 @@ class MoveableObject {
     /*
         Name, for just displaying to user, not used for identification or anything
      */
-    String name;
+    private String name;
 
     // 0 -> Right, 90 -> Up, 180 -> Left, 270 -> down
-    int orientation;
+    private int orientation;
 
     /*
         Size (not implemented):
         How many tiles (or partial tiles) the object occupies
      */
-    Vector2 size;
+    private Vector2 size;
 
     /*
         The tile that the object is on, or, in navigation with vehicles, the exit point
      */
-    Tiles.Tile tile;
+    private Tiles.Tile tile;
 
     /*
         Navigation, navigate to anything using this
      */
-    Navigation navigation;
+    private Navigation navigation;
 
     /*
         Carrying,
      */
-    ArrayList<MoveableObject> carrying;
+    private ArrayList<MoveableObject> carrying;
 
-    MoveableObject parent;
+    private MoveableObject parent;
 
     /*
             Intended for currency and allat
          */
-    int numOf;
+    private int numOf;
 
     /*
         If same parent or tile, whether or not it is allowed to merge the two. Intended for items like pens or money
 
         TODO: Implement split method
      */
-    boolean merge;
+    private boolean merge;
 
     /*
         Types it can immitate:
             0 - General people navigation (sidewalks, parks, etc.)
             1 - General Vehicle navigation (roads)
      */
-    ArrayList<Integer> travelTypes;
+    private ArrayList<Integer> travelTypes;
 
     public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
         this.name = "Unknown";
@@ -439,6 +463,54 @@ class MoveableObject {
         this.numOf = val;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Navigation getNavigation() {
+        return navigation;
+    }
+
+    public void setNavigation(Navigation navigation) {
+        this.navigation = navigation;
+    }
+
+    public ArrayList<MoveableObject> getCarrying() {
+        return carrying;
+    }
+
+    public void setCarrying(ArrayList<MoveableObject> carrying) {
+        this.carrying = carrying;
+    }
+
+    public MoveableObject getParent() {
+        return parent;
+    }
+
+    public void setParent(MoveableObject parent) {
+        this.parent = parent;
+    }
+
+    public boolean isMerge() {
+        return merge;
+    }
+
+    public void setMerge(boolean merge) {
+        this.merge = merge;
+    }
+
+    public ArrayList<Integer> getTravelTypes() {
+        return travelTypes;
+    }
+
+    public void setTravelTypes(ArrayList<Integer> travelTypes) {
+        this.travelTypes = travelTypes;
+    }
+
     /*
         TODO: Not fully implemented
     */
@@ -504,8 +576,8 @@ class MoveableObject {
 class Money extends MoveableObject {
     public Money(Tiles.Tile tile, int num) {
         super(0, new Vector2(0.0, 0.0), tile);
-        this.name = "Money";
-        this.numOf = num;
+        this.setName("Money");
+        this.setNumOf(num);
     }
 }
 
@@ -538,7 +610,7 @@ abstract class Rule {
     abstract public void apply(MoveableObject npc);
 
     public boolean canApply(MoveableObject npc) {
-        if(npc.travelTypes.contains(applyType)) {
+        if(npc.getTravelTypes().contains(applyType)) {
             if(baseRule(npc)) {
                 return true;
             }
@@ -559,7 +631,7 @@ abstract class Rule {
 
  */
 abstract class Actionable extends Rule {
-    protected MoveableObject hostObject;
+    private MoveableObject hostObject;
     public Actionable(MoveableObject hostObject) {this.hostObject = hostObject;}
     public MoveableObject getHostObject() {return hostObject;}
 }
@@ -573,7 +645,7 @@ class CashierCustomer extends Actionable {
     }
 
     public void apply(MoveableObject npc) {
-        npc.takeAndGive(cost, hostObject);
+        npc.takeAndGive(cost, getHostObject());
     }
 
     public boolean baseRule(MoveableObject npc) {
@@ -665,8 +737,8 @@ public class Main {
     public static void main(String[] args) {
         Tiles tiles = new Tiles(32, 32);
         NPC npc = new NPC(0, new Vector2(0.1, 0.1), tiles.get(10,10));
-        npc.navigation.addTarget(tiles.get(5, 5));
-        System.out.println(npc.navigation.navigation);
+        npc.getNavigation().addTarget(tiles.get(5, 5));
+        System.out.println(npc.getNavigation().getNavigation());
         for(int i = 0; i < 5; i++) {npc.navigate(); System.out.println(tiles);}
 
     }
