@@ -1,4 +1,4 @@
-import java.lang.reflect.Array;
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
@@ -331,6 +331,34 @@ class Navigation {
 }
 
 /*
+    Wrapper class for actionable that places it on the given tile
+
+    Stored in ActionablesTransmitter
+ */
+class DynamicActionable {
+    private Actionable     actionable;
+    private MoveableObject source;
+    private Vector2        relativePosition;
+    private Tiles.Tile     tile;
+}
+
+
+/*
+    Pass in a MoveableObject to the constructor and it transmits Actionables to the appropriate neighbor tiles
+*/
+class ActionablesTransmitter {
+    private MoveableObject source;
+    private ArrayList<DynamicActionable> dynamicActionables;
+
+    public ActionablesTransmitter(MoveableObject source, ArrayList<DynamicActionable> dynamicActionables) {
+        this.source = source;
+        this.dynamicActionables = dynamicActionables;
+
+    }
+}
+
+
+/*
     This class is used for basically all items, from people (NPC extends this), equipment, vehicles, money, etc.
 
     What this isn't used for are the ground tiles (Roads, sidewalks, floors).
@@ -374,8 +402,8 @@ class MoveableObject {
     private MoveableObject parent;
 
     /*
-            Intended for currency and allat
-         */
+        Intended for currency and allat
+    */
     private int numOf;
 
     /*
@@ -573,6 +601,13 @@ class MoveableObject {
     }
 }
 
+class Cabinet extends MoveableObject {
+    public Cabinet(int orientation, Vector2 size, Tiles.Tile tile) {
+        super(orientation, size, tile);
+
+    }
+}
+
 class Money extends MoveableObject {
     public Money(Tiles.Tile tile, int num) {
         super(0, new Vector2(0.0, 0.0), tile);
@@ -636,6 +671,42 @@ abstract class Actionable extends Rule {
     public MoveableObject getHostObject() {return hostObject;}
 }
 
+class TakeOpenable extends Actionable {
+    public TakeOpenable(MoveableObject hostObject) {
+        super(hostObject);
+    }
+
+    public void apply(MoveableObject npc) {
+        // Take the first object in the openable
+        getHostObject().takeAndGive(getHostObject().getCarrying().get(0), npc);
+    }
+
+    public boolean baseRule(MoveableObject npc) {
+        if(!getHostObject().getCarrying().isEmpty()) {
+            return true;
+        }
+        return false;
+    }
+}
+
+class GiveOpenable extends Actionable {
+    public GiveOpenable(MoveableObject hostObject) {
+        super(hostObject);
+    }
+
+    public void apply(MoveableObject npc) {
+        // Take the first object in the openable
+        npc.takeAndGive(npc.getCarrying().get(0), getHostObject());
+    }
+
+    public boolean baseRule(MoveableObject npc) {
+        if(!getHostObject().getCarrying().isEmpty()) {
+            return true;
+        }
+        return false;
+    }
+}
+
 class CashierCustomer extends Actionable {
     private MoveableObject cost;
 
@@ -655,8 +726,6 @@ class CashierCustomer extends Actionable {
         }
         return false;
     }
-
-
 }
 
 /*
@@ -726,7 +795,7 @@ class RuleRoadRotate extends Rule {
     }
 
     public boolean baseRule(MoveableObject npc) {
-        if(       npc.getTile().get().hasRule(this)) {
+        if(npc.getTile().get().hasRule(this)) {
             return true;
         }
         return false;
@@ -737,9 +806,10 @@ public class Main {
     public static void main(String[] args) {
         Tiles tiles = new Tiles(32, 32);
         NPC npc = new NPC(0, new Vector2(0.1, 0.1), tiles.get(10,10));
+        npc.getCarrying().add(new Money());
+
         npc.getNavigation().addTarget(tiles.get(5, 5));
         System.out.println(npc.getNavigation().getNavigation());
         for(int i = 0; i < 5; i++) {npc.navigate(); System.out.println(tiles);}
-
     }
 }
