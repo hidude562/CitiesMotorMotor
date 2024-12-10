@@ -31,6 +31,10 @@ class Vector2 {
         this.x = x;
         this.y = y;
     }
+
+    public void rotate(double deg) {
+        double toRads = deg / 57.2957795;
+    }
 }
 
 /*
@@ -147,6 +151,25 @@ class Tiles {
             }
             return tiles;
         }
+
+        public Tile[] getTilesExactlyInRange(int range) {
+            // Do fancy math to get a spiral for it basically
+            int distToCover = (range*2*4);
+            Tile[] tiles = new Tile[distToCover];
+            for (int i = 0; i < distToCover; i++) {
+                int dx = (i%2*2-1);
+                int dy =  ((i/2)%2*2-1);
+                Vert2D direction = new Vert2D(
+                        dx * range + (i/4 * -dx * ((i+1)%2)),
+                        dy * range + (i/4 * -dy * (i%2))
+                );
+                Tile tile = getTileFromRelativeXY(direction);
+                tiles[i] = tile;
+            }
+
+            return tiles;
+        }
+
 
         public String toString() {
             return get().toString();
@@ -332,14 +355,48 @@ class Navigation {
 
 /*
     Wrapper class for actionable that places it on the given tile
+    You probably want to use this in ActionablesTransmitter
+    as it is useless on its own.
 
-    Stored in ActionablesTransmitter
+    Relative position is for orientation of 0,
+    This notably changes with the orientation when used by ActionablesTransmitter
  */
 class DynamicActionable {
     private Actionable     actionable;
-    private MoveableObject source;
     private Vector2        relativePosition;
     private Tiles.Tile     tile;
+
+    public DynamicActionable(Actionable actionable, Vector2 relativePosition) {
+        this.actionable = actionable;
+        this.relativePosition = relativePosition;
+    }
+
+    public void onChange(MoveableObject source) {
+        // TODO: Actually rotate
+        Vector2 rotatedPosition = relativePosition;
+        Tiles.Tile tileToTransferTo = source.getTile().getRelative((int) rotatedPosition.x,(int) rotatedPosition.y);
+
+        // Remove from original tile
+        tile.get().getRules().remove(actionable);
+
+        // Set tile to anew
+        tile = tileToTransferTo;
+
+        // Push
+        tile.get().getRules().add(actionable);
+    }
+
+    public Actionable getActionable() {
+        return actionable;
+    }
+
+    public Vector2 getRelativePosition() {
+        return relativePosition;
+    }
+
+    public Tiles.Tile getTile() {
+        return tile;
+    }
 }
 
 
@@ -353,7 +410,24 @@ class ActionablesTransmitter {
     public ActionablesTransmitter(MoveableObject source, ArrayList<DynamicActionable> dynamicActionables) {
         this.source = source;
         this.dynamicActionables = dynamicActionables;
+    }
 
+    /*
+        Call this when change happens in the source that makes the
+        transmititions change, like movement or orientation
+     */
+    public void onChange() {
+        for(DynamicActionable dynamicActionable : dynamicActionables) {
+            dynamicActionable.onChange(source);
+        }
+    }
+
+    public MoveableObject getSource() {
+        return source;
+    }
+
+    public ArrayList<DynamicActionable> getDynamicActionables() {
+        return dynamicActionables;
     }
 }
 
@@ -368,7 +442,7 @@ class ActionablesTransmitter {
     For example, for a cash register, there are two actionables placed where the customer and worker is. The customer is able to run the actionable if the worker is there, where a navigation path is transmitted and sent back
 
     I'm thinking about having a class this extends, perhaps AbstractObject that is this, but minus the navigation and tiles
- */
+*/
 class MoveableObject {
     /*
         Name, for just displaying to user, not used for identification or anything
@@ -420,16 +494,27 @@ class MoveableObject {
      */
     private ArrayList<Integer> travelTypes;
 
+    /*
+        Used for doing actions for other things:
+        Example, grabbing item
+     */
+    private ActionablesTransmitter actionablesTransmitter;
+
     public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
         this.name = "Unknown";
         this.orientation = orientation;
         this.size = size;
         this.tile = tile;
         this.navigation = new Navigation(this);
+        this.carrying = new ArrayList<MoveableObject>();
         this.travelTypes = new ArrayList<Integer>();
         this.travelTypes.add(0);
         this.numOf = 1;
         this.merge = false;
+        this.actionablesTransmitter = new ActionablesTransmitter(
+                this,
+                new ArrayList<DynamicActionable>()
+        );
 
         if(this.tile != null)
             this.tile.get().getNpcs().add(this);
@@ -457,6 +542,10 @@ class MoveableObject {
         }
         return total;
     }
+
+
+
+
 
     // Getters / setters
     public int getOrientation() {
@@ -520,7 +609,15 @@ class MoveableObject {
     }
 
     public void setParent(MoveableObject parent) {
+        if(this.parent != null) {
+            this.parent.getCarrying().remove(this);
+        }
+
         this.parent = parent;
+
+        if(this.parent != null) {
+            this.parent.getCarrying().add(this);
+        }
     }
 
     public boolean isMerge() {
@@ -604,7 +701,6 @@ class MoveableObject {
 class Cabinet extends MoveableObject {
     public Cabinet(int orientation, Vector2 size, Tiles.Tile tile) {
         super(orientation, size, tile);
-
     }
 }
 
@@ -806,10 +902,12 @@ public class Main {
     public static void main(String[] args) {
         Tiles tiles = new Tiles(32, 32);
         NPC npc = new NPC(0, new Vector2(0.1, 0.1), tiles.get(10,10));
-        npc.getCarrying().add(new Money());
+        MoveableObject money = new Money(null, 5);
+        money.setParent(npc);
 
         npc.getNavigation().addTarget(tiles.get(5, 5));
         System.out.println(npc.getNavigation().getNavigation());
         for(int i = 0; i < 5; i++) {npc.navigate(); System.out.println(tiles);}
+        System.out.println(npc.getCarrying());
     }
 }
