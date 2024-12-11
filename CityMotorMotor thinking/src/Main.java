@@ -144,6 +144,13 @@ class Tiles {
             return new Tile(this.x+x, this.y+y);
         }
 
+        public Tile getRelative(Vector2 pos) {
+            return new Tile(
+                    this.x+((int) pos.x),
+                    this.y+((int) pos.y)
+            );
+        }
+
         public Tile[] getNeighbors() {
             Tile[] tiles = new Tile[4];
             for(int i = 0; i < 4; i++) {
@@ -159,11 +166,11 @@ class Tiles {
             for (int i = 0; i < distToCover; i++) {
                 int dx = (i%2*2-1);
                 int dy =  ((i/2)%2*2-1);
-                Vert2D direction = new Vert2D(
+                Vector2 direction = new Vector2(
                         dx * range + (i/4 * -dx * ((i+1)%2)),
                         dy * range + (i/4 * -dy * (i%2))
                 );
-                Tile tile = getTileFromRelativeXY(direction);
+                Tile tile = getRelative(direction);
                 tiles[i] = tile;
             }
 
@@ -351,6 +358,16 @@ class Navigation {
     public void setNavigationTargets(ArrayList<Tiles.Tile> navigationTargets) {
         this.navigationTargets = navigationTargets;
     }
+}
+
+/*
+    This defines a ruled area for managing npcs that work in this area
+
+    So, for an area for a cashier, there would be a rule to navigate the workers to the cash registers
+    Or for restocking, find what needs to be restocked, then send over the navigation for that too
+ */
+class WorkableArea {
+    // TODO:
 }
 
 /*
