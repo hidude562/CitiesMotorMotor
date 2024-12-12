@@ -396,11 +396,16 @@ class Area {
     So, for an area for a cashier, there would be a rule to navigate the workers to the cash registers
     Or for restocking, find what needs to be restocked, then send over the navigation for that too
  */
-class WorkableArea extends Area {
+abstract class WorkableArea extends Area {
     // TODO:
+
+    private ArrayList<NPC> allowed;
+
     public WorkableArea() {
         super();
     }
+
+    abstract void manage();
 }
 
 /*
