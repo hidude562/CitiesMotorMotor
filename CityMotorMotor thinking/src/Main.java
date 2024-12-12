@@ -1,5 +1,3 @@
-import javax.swing.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
@@ -80,7 +78,7 @@ class TileData {
         this.rules = rules;
     }
 
-    public ArrayList<MoveableObject> getNpcs() {
+    public ArrayList<MoveableObject> getMovableObjects() {
         return npcs;
     }
 
@@ -317,7 +315,7 @@ class Navigation {
                     openSet.add(neighbor);
                 }
 
-                tempObject.getTile().get().getNpcs().remove(tempObject);
+                tempObject.getTile().get().getMovableObjects().remove(tempObject);
             }
         }
     }
@@ -385,6 +383,21 @@ class Area {
         }
     }
 
+    /*
+        Find MoveableObject base class by inherited class
+    */
+    public MoveableObject findClass(MoveableObject search) {
+        for (Tiles.Tile tile : tiles) {
+            for(MoveableObject moveableObject : tile.get().getMovableObjects()) {
+                // TODO: Recursively search children too
+                if(moveableObject.getClass() == search.getClass()) {
+                    return moveableObject;
+                }
+            }
+        }
+        return null;
+    }
+
     public ArrayList<Tiles.Tile> getTiles() {
         return tiles;
     }
@@ -425,6 +438,21 @@ class CommonArea extends Area  {
     // TODO:
     public CommonArea() {
         super();
+    }
+}
+
+class ImmediateStoreArea extends CommonArea {
+    public ImmediateStoreArea() {
+        super();
+    }
+    public boolean buy(MoveableObject moveableObject) {
+        MoveableObject found = findClass(moveableObject);
+        if (found == null) return false;
+
+        // TODO:
+    }
+    public void getObject(MoveableObject moveableObject) {
+
     }
 }
 
@@ -592,7 +620,7 @@ class MoveableObject {
         );
 
         if(this.tile != null)
-            this.tile.get().getNpcs().add(this);
+            this.tile.get().getMovableObjects().add(this);
     }
     // Use this to do the next action, for internal class use as it takes time to go from tile to tile so it will eventually be private
     public void navigate() {
@@ -602,9 +630,9 @@ class MoveableObject {
 
     // For Rule use
     public void move(int x, int y) {
-        this.tile.get().getNpcs().remove(this);
+        this.tile.get().getMovableObjects().remove(this);
         this.tile = this.tile.getRelative(x,y);
-        this.tile.get().getNpcs().add(this);
+        this.tile.get().getMovableObjects().add(this);
     }
 
     // Count the amount of a class in children
@@ -842,6 +870,7 @@ abstract class Actionable extends Rule {
     public MoveableObject getHostObject() {return hostObject;}
 }
 
+// TODO: Probably remove, NPCs should be able parent and unparent anything
 class TakeOpenable extends Actionable {
     public TakeOpenable(MoveableObject hostObject) {
         super(hostObject);
