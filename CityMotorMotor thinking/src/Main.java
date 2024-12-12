@@ -1,4 +1,5 @@
 import javax.swing.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
@@ -45,6 +46,7 @@ class Vector2 {
 class TileData {
     private ArrayList<Rule> rules;
     private ArrayList<MoveableObject> npcs;
+    private ArrayList<Area> areas;
 
     public TileData() {
         rules = new ArrayList<Rule>();
@@ -82,8 +84,14 @@ class TileData {
         return npcs;
     }
 
-    public void setNpcs(ArrayList<MoveableObject> npcs) {
-        this.npcs = npcs;
+    public ArrayList<Area> getAreas() {
+        return areas;
+    }
+
+    public void addArea(Area area) {
+        if(!areas.contains(area)) {
+            areas.add(area);
+        }
     }
 
     public String toString() {
@@ -93,7 +101,7 @@ class TileData {
 
 
 /*
-    The tileset. Eventually, this will be 3D. Get individual tiles with get
+    The tileset. Eventually, this will be 3D once the game reaches decent completion in 2D Get individual tiles with get
  */
 class Tiles {
     private TileData[][] tiles;
@@ -185,7 +193,7 @@ class Tiles {
 }
 
 /*
-    Credit to Anthropic's Sonnet for implementation.
+    Credit to Anthropic's Sonnet for implementation of calculating navigation.
 
     This is basically the google maps for your npc, it tells you where to make certain direction choices and allat based off where you wish to go
  */
@@ -360,14 +368,59 @@ class Navigation {
     }
 }
 
+
+/*
+    Defines a retrievable Area by tiles an such
+ */
+class Area {
+    ArrayList<Tiles.Tile> tiles;
+    public Area() {
+        tiles = new ArrayList<Tiles.Tile>();
+    }
+
+    public void addTile(Tiles.Tile tile) {
+        if(!tiles.contains(tile)) {
+            tiles.add(tile);
+            tile.get().addArea(this);
+        }
+    }
+
+    public ArrayList<Tiles.Tile> getTiles() {
+        return tiles;
+    }
+}
+
 /*
     This defines a ruled area for managing npcs that work in this area
 
     So, for an area for a cashier, there would be a rule to navigate the workers to the cash registers
     Or for restocking, find what needs to be restocked, then send over the navigation for that too
  */
-class WorkableArea {
+class WorkableArea extends Area {
     // TODO:
+    public WorkableArea() {
+        super();
+    }
+}
+
+/*
+    As opposed to workable area where it controls the npc,
+    a CommonArea provides simplified methods for doing certain things,
+    For example, a general store may have a list of items that can be bought
+    and the user can just call something as simple as buy([skibidi_rizzler, blah_blah_blah])
+    (which would set the npc navigation to get the items, pay and such)
+
+    The idea is that you can technically do this manually setting the navigation,
+    but this is basically a kinda facade for that.
+
+    Each room of a building that has use (Including houses and such) should inherit this
+    What shouldn't inherit this are like streets and hallways
+ */
+class CommonArea extends Area  {
+    // TODO:
+    public CommonArea() {
+        super();
+    }
 }
 
 /*
