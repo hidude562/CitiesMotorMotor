@@ -422,6 +422,15 @@ abstract class WorkableArea extends Area {
 }
 
 /*
+    Handles Cash registers and allat
+    Directs employees to work cash registers
+
+ */
+class StoreArea extends WorkableArea {
+
+}
+
+/*
     As opposed to workable area where it controls the npc,
     a CommonArea provides simplified methods for doing certain things,
     For example, a general store may have a list of items that can be bought
@@ -870,43 +879,15 @@ abstract class Actionable extends Rule {
     public MoveableObject getHostObject() {return hostObject;}
 }
 
-// TODO: Probably remove, NPCs should be able parent and unparent anything
-class TakeOpenable extends Actionable {
-    public TakeOpenable(MoveableObject hostObject) {
-        super(hostObject);
-    }
+/*
+    Has list of buyable items and potentially custom ways to get it if it has to be made.
+    Also have prices.
+    For a general store, you would get the item yourself, then go up to the register
+    and the items marked by the store would get their marks removed.
 
-    public void apply(MoveableObject npc) {
-        // Take the first object in the openable
-        getHostObject().takeAndGive(getHostObject().getCarrying().get(0), npc);
-    }
-
-    public boolean baseRule(MoveableObject npc) {
-        if(!getHostObject().getCarrying().isEmpty()) {
-            return true;
-        }
-        return false;
-    }
-}
-
-class GiveOpenable extends Actionable {
-    public GiveOpenable(MoveableObject hostObject) {
-        super(hostObject);
-    }
-
-    public void apply(MoveableObject npc) {
-        // Take the first object in the openable
-        npc.takeAndGive(npc.getCarrying().get(0), getHostObject());
-    }
-
-    public boolean baseRule(MoveableObject npc) {
-        if(!getHostObject().getCarrying().isEmpty()) {
-            return true;
-        }
-        return false;
-    }
-}
-
+    For something where the thing has to be made on the spot, there may have to be a
+    kinda ghost item and then when the cashier reads it, it has to be made or something
+ */
 class CashierCustomer extends Actionable {
     private MoveableObject cost;
 
