@@ -31,8 +31,17 @@ class Vector2 {
         this.y = y;
     }
 
-    public void rotate(double deg) {
-        double toRads = deg / 57.2957795;
+    public static Vector2 rotate(Vector2 vec, double deg) {
+        // Convert degrees to radians
+        double rad = Math.toRadians(deg);
+
+        // Rotation matrix multiplication:
+        // x' = x * cos(θ) - y * sin(θ)
+        // y' = x * sin(θ) + y * cos(θ)
+        double newX = vec.x * Math.cos(rad) - vec.y * Math.sin(rad);
+        double newY = vec.x * Math.sin(rad) + vec.y * Math.cos(rad);
+
+        return new Vector2(newX, newY);
     }
 }
 
@@ -829,6 +838,8 @@ class MoveableObject {
         return numHas;
     }
 }
+
+
 
 class Tag extends MoveableObject {
     MoveableObject removeCost;
