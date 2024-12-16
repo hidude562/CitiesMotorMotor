@@ -19,6 +19,54 @@ class RoomGenerator {
             }
         }
     }
+
+    /*
+        Celluar automana for furniture organization??
+
+        (Trust bro)
+     */
+    public void organizeIteration() {
+        // Look for first the worst offenders of bad designer, then work down
+        // Whats defined as bad design is by the number of corners that are full with furniture
+        for(int j = 0; j < 1; j++) {
+            for (int i = 0; i < 3; i++) {
+                while(true) {
+                    boolean iterationChange = false;
+                    for (MoveableObject moveableObject : objectsToPlace) {
+                        Tiles.Tile[] neighbors = moveableObject.getTile().getTilesExactlyInRange(1);
+
+                        int numOpen = 0;
+                        for (int cornersIndex = 0; cornersIndex < 4; cornersIndex++) {
+                            Tiles.Tile neighborCorner = neighbors[cornersIndex];
+                            if (neighborCorner.get().canMove(moveableObject)) {
+                                numOpen += 1;
+                                System.out.println("Increase..");
+                            }
+                        }
+
+                        // If the furniture is not well put, move it randomly somewhere
+                        if (numOpen <= i) {
+                            // TODO: Optimize lol
+                            for (int useless = 0; useless < 10; useless++) {
+                                int directIndex = (int) (Math.random() * 4) + 4;
+                                Tiles.Tile neighborDirect = neighbors[directIndex];
+                                if (neighborDirect.get().canMove(moveableObject)) {
+                                    moveableObject.setTile(neighborDirect);
+                                    iterationChange = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if(!iterationChange) {
+                        break;
+                    }
+                    System.out.println(tiles.get(0).getTileset());
+                }
+            }
+        }
+    }
 }
 
 class FloorGenerator {
@@ -39,13 +87,14 @@ public class BuildingGenerator {
             }
         }
         ArrayList<MoveableObject> furniture = new ArrayList<>();
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 50; i++) {
             MoveableObject obj = new MoveableObject();
-            obj.setSize(new Vector2(2, 2));
+            obj.setSize(new Vector2(1, 1));
             furniture.add(obj);
         }
 
         RoomGenerator roomGenerator = new RoomGenerator(room, furniture);
+        roomGenerator.organizeIteration();
         System.out.println(tiles);
     }
 }

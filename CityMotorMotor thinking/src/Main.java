@@ -69,21 +69,29 @@ class TileData {
         rules.add(new RuleRoadRotate());
     }
 
-    public Vector2 getOccupiedSpace() {
+    public Vector2 getOccupiedSpace(MoveableObject exclude) {
         Vector2 size = new Vector2(0, 0);
         for(MoveableObject moveableObject : npcs) {
-            size.x += moveableObject.getSize().x;
-            size.y += moveableObject.getSize().y;
+            if(moveableObject != exclude) {
+                size.x += Math.min(1, moveableObject.getSize().x);
+                size.y += Math.min(1, moveableObject.getSize().y);
+            }
         }
         return size;
     }
 
-    // TODO: If the npc size fits within the npcs, return true, else false
+    public boolean isCompletelyFull() {
+        Vector2 space = getOccupiedSpace(null);
+        if(space.x >= 1 && space.y >= 1) {
+            return true;
+        }
+        return false;
+    }
+
+    // If the npc size fits within the npcs, return true, else false
     public boolean canMove(MoveableObject object) {
         Vector2 actualSize = new Vector2(Math.min(1, object.getSize().x), Math.min(1, object.getSize().y));
-        System.out.println(actualSize);
-
-        Vector2 occupied = getOccupiedSpace();
+        Vector2 occupied = getOccupiedSpace(object);
         if(1 - (actualSize.x + occupied.x) >= 0 && 1 - (actualSize.y + occupied.y) >= 0) {
             return true;
         }
@@ -212,7 +220,7 @@ class Tiles {
             Tile[] tiles = new Tile[distToCover];
             for (int i = 0; i < distToCover; i++) {
                 int dx = (i%2*2-1);
-                int dy =  ((i/2)%2*2-1);
+                int dy = ((i/2)%2*2-1);
                 Vector2 direction = new Vector2(
                         dx * range + (i/4 * -dx * ((i+1)%2)),
                         dy * range + (i/4 * -dy * (i%2))
