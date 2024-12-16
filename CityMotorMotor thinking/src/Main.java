@@ -43,6 +43,10 @@ class Vector2 {
 
         return new Vector2(newX, newY);
     }
+
+    public String toString() {
+        return "("+x+", "+y+")";
+    }
 }
 
 /*
@@ -65,9 +69,25 @@ class TileData {
         rules.add(new RuleRoadRotate());
     }
 
+    public Vector2 getOccupiedSpace() {
+        Vector2 size = new Vector2(0, 0);
+        for(MoveableObject moveableObject : npcs) {
+            size.x += moveableObject.getSize().x;
+            size.y += moveableObject.getSize().y;
+        }
+        return size;
+    }
+
     // TODO: If the npc size fits within the npcs, return true, else false
-    public boolean canMove(NPC npc) {
-        return true;
+    public boolean canMove(MoveableObject object) {
+        Vector2 actualSize = new Vector2(Math.min(1, object.getSize().x), Math.min(1, object.getSize().y));
+        System.out.println(actualSize);
+
+        Vector2 occupied = getOccupiedSpace();
+        if(1 - (actualSize.x + occupied.x) >= 0 && 1 - (actualSize.y + occupied.y) >= 0) {
+            return true;
+        }
+        return false;
     }
 
     public boolean hasRule(Rule rule) {
@@ -122,6 +142,14 @@ class Tiles {
         }
     }
 
+    public int getWidth() {
+        return tiles[0].length;
+    }
+
+    public int getHeight() {
+        return tiles.length;
+    }
+
     public boolean inRange(int x, int y) {
         return (x >= 0 && x < tiles[0].length) && (y >= 0 && y < tiles.length);
     }
@@ -135,7 +163,7 @@ class Tiles {
         String b = "";
         for(int i = 0; i < tiles.length; i++) {
             for(int j = 0; j < tiles[i].length; j++) {
-                b+=tiles[i][j].toString();
+                b+=tiles[i][j].toString() + " ";
             }
             b+="\n";
         }
@@ -149,6 +177,10 @@ class Tiles {
         public Tile(int x, int y) {
             this.y = y;
             this.x = x;
+        }
+
+        public Tiles getTileset() {
+            return Tiles.this;
         }
 
         public TileData get() {
@@ -616,7 +648,7 @@ class MoveableObject {
     public MoveableObject() {
         this.name = "Unknown";
         this.orientation = 0;
-        this.size = new Vector2(0, 0);
+        this.size = new Vector2(1, 1);
         this.tile = null;
         this.navigation = new Navigation(this);
         this.carrying = new ArrayList<MoveableObject>();
@@ -658,11 +690,76 @@ class MoveableObject {
         this.tile.get().getRules().get(choice).apply(this);
     }
 
+    public void setTile(Tiles.Tile tile) {
+        remove();
+        this.tile = tile;
+        place();
+    }
+
     // For Rule use
     public void move(int x, int y) {
-        this.tile.get().getMovableObjects().remove(this);
+        remove();
         this.tile = this.tile.getRelative(x,y);
-        this.tile.get().getMovableObjects().add(this);
+        place();
+    }
+
+    /*
+        Removes object reference(s) in tile
+     */
+    private void remove() {
+        if(this.tile != null) {
+            int startRelX = Math.min(0, (int) size.x);
+            int startRelY = Math.min(0, (int) size.y);
+
+            int endRelX = Math.max(0, (int) size.x);
+            int endRelY = Math.max(0, (int) size.y);
+
+            for (int x = startRelX; x < endRelX; x++) {
+                for (int y = startRelY; y < endRelY; y++) {
+                    Tiles.Tile relativeTile = this.tile.getRelative(x, y);
+                    relativeTile.get().getMovableObjects().remove(this);
+                }
+            }
+        }
+    }
+
+    public boolean canMoveTo(Tiles.Tile tile) {
+        int startRelX = Math.min(0, (int) size.x);
+        int startRelY = Math.min(0, (int) size.y);
+
+        int endRelX = Math.max(0, (int) size.x);
+        int endRelY = Math.max(0, (int) size.y);
+
+
+        for (int x = startRelX; x < endRelX; x++) {
+            for (int y = startRelY; y < endRelY; y++) {
+                Tiles.Tile relativeTile = tile.getRelative(x, y);
+                if(!relativeTile.get().canMove(this)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /*
+        Pushes object reference(s) in tile
+     */
+    private void place() {
+        if(this.tile != null) {
+            int startRelX = Math.min(0, (int) size.x);
+            int startRelY = Math.min(0, (int) size.y);
+
+            int endRelX = Math.max(0, (int) size.x);
+            int endRelY = Math.max(0, (int) size.y);
+
+            for (int x = startRelX; x < endRelX; x++) {
+                for (int y = startRelY; y < endRelY; y++) {
+                    Tiles.Tile relativeTile = this.tile.getRelative(x, y);
+                    relativeTile.get().getMovableObjects().add(this);
+                }
+            }
+        }
     }
 
     // Count the amount of a class in children
@@ -707,10 +804,6 @@ class MoveableObject {
 
     public Tiles.Tile getTile() {
         return tile;
-    }
-
-    public void setTile(Tiles.Tile tile) {
-        this.tile = tile;
     }
 
     public int getNumOf() {
@@ -839,8 +932,6 @@ class MoveableObject {
     }
 }
 
-
-
 class Tag extends MoveableObject {
     MoveableObject removeCost;
     public Tag(MoveableObject removeCost) {
@@ -945,7 +1036,6 @@ class CashierCustomer extends Actionable {
     }
 
     public boolean baseRule(MoveableObject npc) {
-        System.out.println(npc.getOrientation());
         if(npc.count(cost) > cost.getNumOf()) {
             return true;
         }
@@ -967,7 +1057,6 @@ class RuleRoadUp extends Rule {
     }
 
     public boolean baseRule(MoveableObject npc) {
-        System.out.println(npc.getOrientation());
         if(npc.getOrientation() == 90 && npc.getTile().get().hasRule(this)) {
             return true;
         }
