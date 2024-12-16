@@ -422,15 +422,6 @@ abstract class WorkableArea extends Area {
 }
 
 /*
-    Handles Cash registers and allat
-    Directs employees to work cash registers
-
- */
-class StoreArea extends WorkableArea {
-
-}
-
-/*
     As opposed to workable area where it controls the npc,
     a CommonArea provides simplified methods for doing certain things,
     For example, a general store may have a list of items that can be bought
@@ -459,6 +450,7 @@ class ImmediateStoreArea extends CommonArea {
         if (found == null) return false;
 
         // TODO:
+        return false;
     }
     public void getObject(MoveableObject moveableObject) {
 
@@ -612,6 +604,26 @@ class MoveableObject {
      */
     private ActionablesTransmitter actionablesTransmitter;
 
+    public MoveableObject() {
+        this.name = "Unknown";
+        this.orientation = 0;
+        this.size = new Vector2(0, 0);
+        this.tile = null;
+        this.navigation = new Navigation(this);
+        this.carrying = new ArrayList<MoveableObject>();
+        this.travelTypes = new ArrayList<Integer>();
+        this.travelTypes.add(0);
+        this.numOf = 1;
+        this.merge = false;
+        this.actionablesTransmitter = new ActionablesTransmitter(
+                this,
+                new ArrayList<DynamicActionable>()
+        );
+
+        if(this.tile != null)
+            this.tile.get().getMovableObjects().add(this);
+    }
+
     public MoveableObject(int orientation, Vector2 size, Tiles.Tile tile) {
         this.name = "Unknown";
         this.orientation = orientation;
@@ -655,9 +667,17 @@ class MoveableObject {
         return total;
     }
 
-
-
-
+    public ArrayList<MoveableObject> recurseAllChildrenAndSelf() {
+        ArrayList<MoveableObject> children = new ArrayList<>();
+        children.add(this);
+        for(MoveableObject obj : getCarrying()) {
+            ArrayList<MoveableObject> childrenChildren = obj.recurseAllChildrenAndSelf();
+            for(MoveableObject obj2 : childrenChildren) {
+                children.add(obj2);
+            }
+        }
+        return children;
+    }
 
     // Getters / setters
     public int getOrientation() {
@@ -778,12 +798,12 @@ class MoveableObject {
 
     /*
         Take an amount of object and give it to another movable object
-        Returns true if it were able to transfer given amount
+        Returns number transfered
      */
-    public boolean takeAndGive(MoveableObject wants, MoveableObject to) {
+    public int takeAndGive(MoveableObject wants, MoveableObject to) {
         ArrayList<MoveableObject> toTransfer = new ArrayList<>();
         int numHas = 0;
-        for(MoveableObject has : carrying) {
+        for(MoveableObject has : recurseAllChildrenAndSelf()) {
             if(has.getClass() == wants.getClass()) {
                 toTransfer.add(has);
                 // Split if too many of item
@@ -799,29 +819,27 @@ class MoveableObject {
                     for (MoveableObject obj : toTransfer) {
                         obj.reparent(to);
                     }
-                    return true;
+                    return wants.getNumOf();
                 }
 
                 numHas += has.getNumOf();
                 toTransfer.add(has);
             }
         }
-        return false;
+        return numHas;
     }
 }
 
-class Cabinet extends MoveableObject {
-    public Cabinet(int orientation, Vector2 size, Tiles.Tile tile) {
-        super(orientation, size, tile);
+class Tag extends MoveableObject {
+    MoveableObject removeCost;
+    public Tag(MoveableObject removeCost) {
+        super();
+        this.removeCost = removeCost;
     }
 }
 
 class Money extends MoveableObject {
-    public Money(Tiles.Tile tile, int num) {
-        super(0, new Vector2(0.0, 0.0), tile);
-        this.setName("Money");
-        this.setNumOf(num);
-    }
+
 }
 
 /*
@@ -832,6 +850,25 @@ class NPC extends MoveableObject {
 
     public NPC(int orientation, Vector2 size, Tiles.Tile tile) {
         super(orientation, size, tile);
+    }
+
+    // If moveable object base class is within 1 tile or same tile, get it
+    public boolean grab(MoveableObject grab) {
+        Tiles.Tile[] tiles = getTile().getTilesExactlyInRange(1);
+
+        int targetNum = grab.getNumOf();
+        int numHas = 0;
+
+        for(Tiles.Tile tile : tiles) {
+            for(MoveableObject moveableObject : tile.get().getMovableObjects()) {
+                int numGot = moveableObject.takeAndGive(grab, this);
+                grab.setNumOf(grab.getNumOf() - numGot);
+                numHas += numGot;
+            }
+        }
+        grab.setNumOf(targetNum);
+
+        return numHas == targetNum;
     }
 }
 
@@ -880,20 +917,16 @@ abstract class Actionable extends Rule {
 }
 
 /*
-    Has list of buyable items and potentially custom ways to get it if it has to be made.
-    Also have prices.
-    For a general store, you would get the item yourself, then go up to the register
-    and the items marked by the store would get their marks removed.
+    Items from store are tagged, and running an npc through the cashier removes the tags
+    for the price
 
-    For something where the thing has to be made on the spot, there may have to be a
-    kinda ghost item and then when the cashier reads it, it has to be made or something
  */
 class CashierCustomer extends Actionable {
     private MoveableObject cost;
 
     public CashierCustomer(MoveableObject hostObject) {
         super(hostObject);
-        cost = new Money(null, 10);
+        cost = new Money();
     }
 
     public void apply(MoveableObject npc) {
@@ -980,19 +1013,5 @@ class RuleRoadRotate extends Rule {
             return true;
         }
         return false;
-    }
-}
-
-public class Main {
-    public static void main(String[] args) {
-        Tiles tiles = new Tiles(32, 32);
-        NPC npc = new NPC(0, new Vector2(0.1, 0.1), tiles.get(10,10));
-        MoveableObject money = new Money(null, 5);
-        money.setParent(npc);
-
-        npc.getNavigation().addTarget(tiles.get(5, 5));
-        System.out.println(npc.getNavigation().getNavigation());
-        for(int i = 0; i < 5; i++) {npc.navigate(); System.out.println(tiles);}
-        System.out.println(npc.getCarrying());
     }
 }
