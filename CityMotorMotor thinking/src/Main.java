@@ -62,6 +62,8 @@ class TileData {
     public TileData() {
         rules = new ArrayList<Rule>();
         npcs = new ArrayList<MoveableObject>();
+        areas = new ArrayList<Area>();
+
         rules.add(new RuleRoadUp());
         rules.add(new RuleRoadLeft());
         rules.add(new RuleRoadRight());
@@ -189,6 +191,10 @@ class Tiles {
             this.x = x;
         }
 
+        public boolean inRange() {
+            return Tiles.this.inRange(x, y);
+        }
+
         public Tiles getTileset() {
             return Tiles.this;
         }
@@ -237,6 +243,10 @@ class Tiles {
 
         public String toString() {
             return get().toString();
+        }
+
+        public boolean equals(Tiles.Tile other) {
+            return this.x == other.x && this.y == other.y;
         }
     }
 }
@@ -432,6 +442,16 @@ class Area {
             tiles.add(tile);
             tile.get().addArea(this);
         }
+    }
+
+    public void addTiles(ArrayList<Tiles.Tile> tiles) {
+        for(Tiles.Tile tile : tiles) {
+            addTile(tile);
+        }
+    }
+
+    public boolean has(Tiles.Tile tile) {
+        return tile.get().getAreas().contains(this);
     }
 
     /*
@@ -694,6 +714,7 @@ class MoveableObject {
         if(this.tile != null)
             this.tile.get().getMovableObjects().add(this);
     }
+
     // Use this to do the next action, for internal class use as it takes time to go from tile to tile so it will eventually be private
     public void navigate() {
         int choice = navigation.next();
@@ -749,6 +770,25 @@ class MoveableObject {
         return tiles;
     }
 
+    public boolean willBeInSameArea(Area a, Tiles.Tile tile) {
+        int startRelX = Math.min(0, (int) size.x);
+        int startRelY = Math.min(0, (int) size.y);
+
+        int endRelX = Math.max(0, (int) size.x);
+        int endRelY = Math.max(0, (int) size.y);
+
+
+        for (int x = startRelX; x < endRelX; x++) {
+            for (int y = startRelY; y < endRelY; y++) {
+                Tiles.Tile relativeTile = tile.getRelative(x, y);
+                if(!relativeTile.get().getAreas().contains(a)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public boolean canMoveTo(Tiles.Tile tile) {
         int startRelX = Math.min(0, (int) size.x);
         int startRelY = Math.min(0, (int) size.y);
@@ -760,7 +800,7 @@ class MoveableObject {
         for (int x = startRelX; x < endRelX; x++) {
             for (int y = startRelY; y < endRelY; y++) {
                 Tiles.Tile relativeTile = tile.getRelative(x, y);
-                if(!relativeTile.get().canMove(this)) {
+                if(relativeTile.inRange() && !relativeTile.get().canMove(this)) {
                     return false;
                 }
             }

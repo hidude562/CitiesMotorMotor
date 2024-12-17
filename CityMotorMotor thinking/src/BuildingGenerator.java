@@ -1,12 +1,12 @@
 import java.util.ArrayList;
 
-class RoomGenerator {
+class RoomGenerator extends Area {
     ArrayList<MoveableObject> objectsToPlace;
-    ArrayList<Tiles.Tile> tiles;
 
     public RoomGenerator(ArrayList<Tiles.Tile> tiles, ArrayList<MoveableObject> objectsToPlace) {
+        super();
         this.objectsToPlace = objectsToPlace;
-        this.tiles = tiles;
+        addTiles(tiles);
 
         // Randomly place furniture
         for(MoveableObject object : objectsToPlace) {
@@ -39,7 +39,7 @@ class RoomGenerator {
 
                         int numOpen = 0;
                         for (Tiles.Tile neighborCorner : cornerNeighbors) {
-                            if (neighborCorner.get().canMove(moveableObject)) {
+                            if (neighborCorner.get().canMove(moveableObject) && moveableObject.willBeInSameArea(this, neighborCorner)) {
                                 numOpen += 1;
                                 System.out.println("Increase..");
                             }
@@ -49,9 +49,9 @@ class RoomGenerator {
                         if (numOpen <= i) {
                             // TODO: Optimize lol
                             for (int useless = 0; useless < 10; useless++) {
-                                int directIndex = (int) (Math.random() * 4) + 4;
+                                int directIndex = (int) (Math.random() * 4);
                                 Tiles.Tile neighborDirect = neighbors[directIndex];
-                                if (moveableObject.canMoveTo(neighborDirect)) {
+                                if (moveableObject.canMoveTo(neighborDirect) && moveableObject.willBeInSameArea(this, neighborDirect)) {
                                     moveableObject.setTile(neighborDirect);
                                     iterationChange = true;
                                     break;
@@ -82,15 +82,20 @@ public class BuildingGenerator {
     public static void main(String[] args) {
         Tiles tiles = new Tiles(20, 20);
         ArrayList<Tiles.Tile> room = new ArrayList<>();
-        for(int y = 5; y < 15; y++) {
-            for(int x = 5; x < 15; x++) {
+        for(int y = 2; y < 12; y++) {
+            for(int x = 2; x < 12; x++) {
                 room.add(tiles.get(x,y));
             }
         }
         ArrayList<MoveableObject> furniture = new ArrayList<>();
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 5; i++) {
             MoveableObject obj = new MoveableObject();
-            obj.setSize(new Vector2(3, 2));
+            obj.setSize(
+                    new Vector2(
+                    (int) (Math.random() * 2) + 1,
+                            (int) (Math.random() * 2) + 1
+                    )
+            );
             furniture.add(obj);
         }
 
