@@ -88,8 +88,10 @@ class TileData {
         return false;
     }
 
-    // If the npc size fits within the npcs, return true, else false
-    public boolean canMove(MoveableObject object) {
+    /*
+     If the npc size fits within the npcs, return true, else false
+     */
+    boolean canMove(MoveableObject object) {
         Vector2 actualSize = new Vector2(Math.min(1, object.getSize().x), Math.min(1, object.getSize().y));
         Vector2 occupied = getOccupiedSpace(object);
         if(1 - (actualSize.x + occupied.x) >= 0 && 1 - (actualSize.y + occupied.y) >= 0) {
@@ -729,6 +731,22 @@ class MoveableObject {
                 }
             }
         }
+    }
+
+    public Tiles.Tile[] getNeigborCornerTiles() {
+        int startRelX = Math.min(-1, (int) size.x);
+        int startRelY = Math.min(-1, (int) size.y);
+
+        int endRelX = Math.max(1, (int) size.x);
+        int endRelY = Math.max(1, (int) size.y);
+
+        Tiles.Tile[] tiles = new Tiles.Tile[] {
+            getTile().getRelative(startRelX, startRelY),
+            getTile().getRelative(startRelX, endRelY),
+            getTile().getRelative(endRelX, startRelY),
+            getTile().getRelative(endRelX, endRelY)
+        };
+        return tiles;
     }
 
     public boolean canMoveTo(Tiles.Tile tile) {
