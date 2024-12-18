@@ -214,6 +214,7 @@ class Tiles {
             );
         }
 
+        // NOTE, Up down left right, not diagonals
         public Tile[] getNeighbors() {
             Tile[] tiles = new Tile[4];
             for(int i = 0; i < 4; i++) {
@@ -471,6 +472,10 @@ class Area {
 
     public ArrayList<Tiles.Tile> getTiles() {
         return tiles;
+    }
+
+    protected Tiles.Tile randomTile() {
+        return tiles.get((int) (tiles.size() * Math.random()));
     }
 }
 
