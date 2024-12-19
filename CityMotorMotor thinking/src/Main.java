@@ -133,8 +133,15 @@ class TileData {
         }
     }
 
+    public void removeArea(Area area) {
+        areas.remove(area);
+    }
+
     public String toString() {
-        return String.valueOf(npcs.size());
+        if(areas.size() > 0) {
+            return String.valueOf(areas.getLast().debugDisplay);
+        }
+        return "_";
     }
 }
 
@@ -216,10 +223,24 @@ class Tiles {
 
         // NOTE, Up down left right, not diagonals
         public Tile[] getNeighbors() {
-            Tile[] tiles = new Tile[4];
-            for(int i = 0; i < 4; i++) {
-                Tile tile = new Tile(i%2*2-1+x, (i+1)%2*2-1+y);
-            }
+            Tile[] tiles = new Tile[] {
+                    new Tile(
+                            x-1,
+                            y
+                    ),
+                    new Tile(
+                            x,
+                            y+1
+                    ),
+                    new Tile(
+                            x+1,
+                            y
+                    ),
+                    new Tile(
+                            x,
+                            y-1
+                    )
+            };
             return tiles;
         }
 
@@ -434,8 +455,13 @@ class Navigation {
  */
 class Area {
     ArrayList<Tiles.Tile> tiles;
+
+    public String debugDisplay;
+    public static final String[] debugRenderings = new String[]{"!", "@", "#", "$", "%", ".", "{", "P", "W", "E", "Q", "A", "s", "B", "v", "M", "z"};
+
     public Area() {
         tiles = new ArrayList<Tiles.Tile>();
+        this.debugDisplay = debugRenderings[(int) (Math.random() * debugRenderings.length)];
     }
 
     public void addTile(Tiles.Tile tile) {
@@ -443,6 +469,11 @@ class Area {
             tiles.add(tile);
             tile.get().addArea(this);
         }
+    }
+
+    public void removeTile(Tiles.Tile tile) {
+        tiles.remove(tile);
+        tile.get().removeArea(this);
     }
 
     public void addTiles(ArrayList<Tiles.Tile> tiles) {
