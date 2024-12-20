@@ -168,16 +168,7 @@ class AreaGeneratorFufiller extends Area {
                 AreaGeneratorFufiller asFufiller = (AreaGeneratorFufiller) area;
                 double need = asFufiller.getFufillment();
 
-
-                // Ignore those if the borders will look too goofy
-                int countAreas = 0;
-                for(Tiles.Tile neighbor : tileNeighbors) {
-                    if(neighbor.get().getAreas().contains(this)) {
-                        countAreas++;
-                    }
-                }
-
-                if(need > highestNeed) { //  && countAreas > 1
+                if(need > highestNeed) {
                     highestNeedArea = area;
                     highestNeed = need;
                 }
@@ -389,6 +380,7 @@ class SectorGenerator extends Area {
     public void generate() {
         int estimatedSpaceLeft = tiles.size();
 
+        // Requests rooms to be made
         ArrayList<AreaGeneratorFufiller> roomGenerators = new ArrayList<AreaGeneratorFufiller>();
         int i = 0;
         while(estimatedSpaceLeft > 0) {
@@ -452,13 +444,13 @@ class ApartmentSectorGenerator extends SectorGenerator {
     static {
         rooms = new ArrayList<AreaGeneratorManagerConfig>();
         // Bedroom
-        rooms.add(new AreaGeneratorManagerConfig(6,30,0.3));
+        rooms.add(new AreaGeneratorManagerConfig(6,30,0.35));
         // El bano
-        rooms.add(new AreaGeneratorManagerConfig(4,15,0.1));
+        rooms.add(new AreaGeneratorManagerConfig(4,15,0.15));
         // Kitchen
-        rooms.add(new AreaGeneratorManagerConfig(6,40,0.3));
+        rooms.add(new AreaGeneratorManagerConfig(6,40,0.35));
         // Living room
-        rooms.add(new AreaGeneratorManagerConfig(6,40,0.5));
+        rooms.add(new AreaGeneratorManagerConfig(12,40,0.35));
     };
 
     public ApartmentSectorGenerator(ArrayList<Tiles.Tile> tiles) {
@@ -491,8 +483,8 @@ public class BuildingGenerator {
         // Test room
         Tiles tiles = new Tiles(50, 50);
         ArrayList<Tiles.Tile> room = new ArrayList<>();
-        for(int y = 2; y < 6; y++) {
-            for(int x = 2; x < 15; x++) {
+        for(int y = 2; y < 10; y++) {
+            for(int x = 2; x < 10; x++) {
                 room.add(tiles.get(x,y));
             }
         }

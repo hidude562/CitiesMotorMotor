@@ -462,7 +462,7 @@ class Area {
 
     public Area() {
         tiles = new ArrayList<Tiles.Tile>();
-        this.debugDisplay = debugRenderings[debugRenderIndex];
+        this.debugDisplay = debugRenderings[debugRenderIndex%debugRenderings.length];
         debugRenderIndex++;
     }
 
@@ -482,10 +482,12 @@ class Area {
         }
     }
 
+    // Remove tile and references to this
+    // Importantly, if you want to get rid of all references to the tile, do clearAllTiles
     public void removeTile(Tiles.Tile tile) {
-        for(int i = 0; i < tiles.size(); i++) {
+        for (int i = 0; i < tiles.size(); i++) {
             Tiles.Tile tile1 = tiles.get(i);
-            if(tile1.equals(tile)) {
+            if (tile1.equals(tile)) {
                 tiles.remove(i);
                 i--;
             }
