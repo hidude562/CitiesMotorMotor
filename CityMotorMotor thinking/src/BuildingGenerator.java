@@ -121,7 +121,7 @@ class AreaGeneratorManagerConfig {
     }
 
     public boolean aboveMinimum(int numTiles) {
-        System.out.println(numTiles);
+        System.out.println("Tiles:" + numTiles);
         return numTiles >= minTiles;
     }
 }
@@ -168,7 +168,7 @@ class AreaGeneratorFufiller extends Area {
                 AreaGeneratorFufiller asFufiller = (AreaGeneratorFufiller) area;
                 double need = asFufiller.getFufillment();
 
-                /*
+
                 // Ignore those if the borders will look too goofy
                 int countAreas = 0;
                 for(Tiles.Tile neighbor : tileNeighbors) {
@@ -176,8 +176,6 @@ class AreaGeneratorFufiller extends Area {
                         countAreas++;
                     }
                 }
-
-                 */
 
                 if(need > highestNeed) { //  && countAreas > 1
                     highestNeedArea = area;
@@ -228,7 +226,7 @@ class AreaGeneratorFufiller extends Area {
                 // Remove this area from tile
                 removeTile(tile);
 
-                // Add the neighbors
+                // Get neigbors that arent this for replacing previous
                 ArrayList<Area> neighborsFlip = new ArrayList<Area>();
                 for(Tiles.Tile tileNeighbor : tile.getNeighbors()) {
                     ArrayList<Area> neighborAreas = tileNeighbor.get().getAreas();
@@ -240,17 +238,18 @@ class AreaGeneratorFufiller extends Area {
                 }
 
                 Area randomNeighborToFlipFormer = neighborsFlip.get((int) (Math.random() * neighborsFlip.size()));
-
                 randomNeighborToFlipFormer.addTile(tile);
 
                 ArrayList<Area> areas = randomSwap.get().getAreas();
                 for(int j = 0; j < areas.size(); j++) {
                     Area area = areas.get(j);
                     if(area.getClass() == this.getClass()) {
-                        areas.remove(area);
+                        area.removeTile(randomSwap);
                     }
                 }
                 addTile(randomSwap);
+
+
 
                 changed = true;
             }
@@ -360,9 +359,8 @@ class AreaGeneratorFufiller extends Area {
     }
 
     public void generateInitial() {
-        int numTilesItWants = config.numTilesWanted(expandableArea.getTiles().size());
         Tiles.Tile startTile = expandableArea.randomTile();
-        addTile(startTile);
+        stakeTile(startTile);
     }
 
     public double getFufillment() {
@@ -424,6 +422,7 @@ class SectorGenerator extends Area {
                 roomGenerator.negociateAllTiles();
             }
 
+
             // Clean up ugly borders
             boolean change = true;
             while (change) {
@@ -436,11 +435,11 @@ class SectorGenerator extends Area {
                 }
             }
 
+
             // If messing with the ugly borders made something below the minimum
             // (Likely when first run), then renegociate
             renegotiate = false;
             for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
-                System.out.println(roomGenerator.aboveMinimum());
                 if(!roomGenerator.aboveMinimum()) {
                     renegotiate = true;
                 }

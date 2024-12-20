@@ -138,7 +138,7 @@ class TileData {
     }
 
     public String toString() {
-        if(areas.size() > 0) {
+        if(areas.size() > 1) {
             return String.valueOf(areas.getLast().debugDisplay);
         }
         return "_";
@@ -458,21 +458,38 @@ class Area {
 
     public String debugDisplay;
     public static final String[] debugRenderings = new String[]{"!", "@", "#", "$", "%", ".", "{", "P", "W", "E", "Q", "A", "s", "B", "v", "M", "z"};
+    private static int debugRenderIndex = 0;
 
     public Area() {
         tiles = new ArrayList<Tiles.Tile>();
-        this.debugDisplay = debugRenderings[(int) (Math.random() * debugRenderings.length)];
+        this.debugDisplay = debugRenderings[debugRenderIndex];
+        debugRenderIndex++;
     }
 
     public void addTile(Tiles.Tile tile) {
-        if(!tiles.contains(tile)) {
+        boolean contains = false;
+
+        for(int i = 0; i < tiles.size(); i++) {
+            Tiles.Tile tile1 = tiles.get(i);
+            if(tile1.equals(tile)) {
+                contains = true;
+                break;
+            }
+        }
+        if(!contains) {
             tiles.add(tile);
             tile.get().addArea(this);
         }
     }
 
     public void removeTile(Tiles.Tile tile) {
-        tiles.remove(tile);
+        for(int i = 0; i < tiles.size(); i++) {
+            Tiles.Tile tile1 = tiles.get(i);
+            if(tile1.equals(tile)) {
+                tiles.remove(i);
+                i--;
+            }
+        }
         tile.get().removeArea(this);
     }
 
