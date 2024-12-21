@@ -156,7 +156,7 @@ class AreaGeneratorFufiller extends Area {
     public void negociateTile(Tiles.Tile tile) {
         // Give to highest fufillment need
         // Removes others and self
-        double highestNeed = 0.0;
+        double highestNeed = -1.0;
         Area highestNeedArea = null;
         ArrayList<Area> areas = tile.get().getAreas();
 
@@ -219,14 +219,13 @@ class AreaGeneratorFufiller extends Area {
                 for(Tiles.Tile tileNeighbor : tile.getNeighbors()) {
                     ArrayList<Area> neighborAreas = tileNeighbor.get().getAreas();
                     for(Area neighborArea : neighborAreas) {
-                        if(neighborArea != this && !neighborsFlip.contains(neighborArea)) {
+                        if(neighborArea.getClass() == this.getClass() && neighborArea != this && !neighborsFlip.contains(neighborArea)) {
                             neighborsFlip.add(neighborArea);
                         }
                     }
                 }
 
                 Area randomNeighborToFlipFormer = neighborsFlip.get((int) (Math.random() * neighborsFlip.size()));
-                randomNeighborToFlipFormer.addTile(tile);
 
                 ArrayList<Area> areas = randomSwap.get().getAreas();
                 for(int j = 0; j < areas.size(); j++) {
@@ -239,8 +238,9 @@ class AreaGeneratorFufiller extends Area {
                 // Remove this area from tile
                 removeTile(tile);
                 addTile(randomSwap);
+                randomNeighborToFlipFormer.addTile(tile);
 
-
+                System.out.println(tile.getTileset());
 
                 changed = true;
             }
@@ -284,7 +284,10 @@ class AreaGeneratorFufiller extends Area {
 
         int numTilesItWants = config.numTilesWanted(expandableArea.getTiles().size());
 
-        if(tiles.size() < numTilesItWants) {
+        ArrayList<Tiles.Tile> potentialPotentialExpandTos = getTilesCanExpandTo();
+        int lowestContenders = getLowestContenders(potentialPotentialExpandTos);
+
+        if(lowestContenders == 0 || tiles.size() < numTilesItWants) {
             return true;
         }
         return false;
@@ -408,8 +411,6 @@ class SectorGenerator extends Area {
                 }
             }
 
-            System.out.println(tiles.get(0).getTileset());
-
             // Finalize borders in africa colonization
             for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
                 roomGenerator.negociateAllTiles();
@@ -445,13 +446,13 @@ class ApartmentSectorGenerator extends SectorGenerator {
     static {
         rooms = new ArrayList<AreaGeneratorManagerConfig>();
         // Bedroom
-        rooms.add(new AreaGeneratorManagerConfig(6,30,0.45));
+        rooms.add(new AreaGeneratorManagerConfig(6,30,0.35));
         // El bano
-        rooms.add(new AreaGeneratorManagerConfig(4,15,0.15));
+        rooms.add(new AreaGeneratorManagerConfig(4,6,0.15));
         // Kitchen
-        rooms.add(new AreaGeneratorManagerConfig(6,40,0.45));
+        rooms.add(new AreaGeneratorManagerConfig(6,40,0.35));
         // Living room
-        rooms.add(new AreaGeneratorManagerConfig(12,40,0.45));
+        rooms.add(new AreaGeneratorManagerConfig(12,40,0.35));
     };
 
     public ApartmentSectorGenerator(ArrayList<Tiles.Tile> tiles) {
