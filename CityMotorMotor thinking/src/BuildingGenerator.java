@@ -214,9 +214,6 @@ class AreaGeneratorFufiller extends Area {
                 // Find random swap that will work for this tile (Perhaps breaking another though)
                 Tiles.Tile randomSwap = rearrangeSpots.get((int) (Math.random() * rearrangeSpots.size()));
 
-                // Remove this area from tile
-                removeTile(tile);
-
                 // Get neigbors that arent this for replacing previous
                 ArrayList<Area> neighborsFlip = new ArrayList<Area>();
                 for(Tiles.Tile tileNeighbor : tile.getNeighbors()) {
@@ -238,6 +235,9 @@ class AreaGeneratorFufiller extends Area {
                         area.removeTile(randomSwap);
                     }
                 }
+
+                // Remove this area from tile
+                removeTile(tile);
                 addTile(randomSwap);
 
 
@@ -324,10 +324,10 @@ class AreaGeneratorFufiller extends Area {
     }
 
     public void expandIter() {
-        int lowestContenders = -1;
         ArrayList<Tiles.Tile> potentialPotentialExpandTos = getTilesCanExpandTo();
 
-        lowestContenders = getLowestContenders(potentialPotentialExpandTos);
+        int lowestContenders = getLowestContenders(potentialPotentialExpandTos);
+        System.out.println(lowestContenders);
 
         // Save the tiles that match the lowest contendor
         ArrayList<Tiles.Tile> potentialExpandTos = new ArrayList<Tiles.Tile>();
@@ -393,8 +393,7 @@ class SectorGenerator extends Area {
             roomGenerators.add(roomGenerator);
         }
 
-        // Like the early 1800s when europe began colonizing africa
-        // Not exact and final borders, but suggestions fo final conference
+        // Colonize africa
         boolean renegotiate = true;
         while(renegotiate) {
             boolean allColonzied = false;
@@ -408,6 +407,8 @@ class SectorGenerator extends Area {
                     }
                 }
             }
+
+            System.out.println(tiles.get(0).getTileset());
 
             // Finalize borders in africa colonization
             for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
@@ -444,13 +445,13 @@ class ApartmentSectorGenerator extends SectorGenerator {
     static {
         rooms = new ArrayList<AreaGeneratorManagerConfig>();
         // Bedroom
-        rooms.add(new AreaGeneratorManagerConfig(6,30,0.35));
+        rooms.add(new AreaGeneratorManagerConfig(6,30,0.45));
         // El bano
         rooms.add(new AreaGeneratorManagerConfig(4,15,0.15));
         // Kitchen
-        rooms.add(new AreaGeneratorManagerConfig(6,40,0.35));
+        rooms.add(new AreaGeneratorManagerConfig(6,40,0.45));
         // Living room
-        rooms.add(new AreaGeneratorManagerConfig(12,40,0.35));
+        rooms.add(new AreaGeneratorManagerConfig(12,40,0.45));
     };
 
     public ApartmentSectorGenerator(ArrayList<Tiles.Tile> tiles) {
