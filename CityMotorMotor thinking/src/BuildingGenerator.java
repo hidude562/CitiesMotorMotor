@@ -121,7 +121,6 @@ class AreaGeneratorManagerConfig {
     }
 
     public boolean aboveMinimum(int numTiles) {
-        System.out.println("Tiles:" + numTiles);
         return numTiles >= minTiles;
     }
 }
@@ -168,6 +167,10 @@ class AreaGeneratorFufiller extends Area {
                 AreaGeneratorFufiller asFufiller = (AreaGeneratorFufiller) area;
                 double need = asFufiller.getFufillment();
 
+                if(((AreaGeneratorFufiller) area).isAwquadTile(tile)) {
+                    need = 0;
+                }
+
                 if(need > highestNeed) {
                     highestNeedArea = area;
                     highestNeed = need;
@@ -183,6 +186,10 @@ class AreaGeneratorFufiller extends Area {
                 i--;
             }
         }
+    }
+
+    public void sortTilesByContenders() {
+        tiles.sort((a, b) -> numAreaContenders(a) - numAreaContenders(b));
     }
 
     public void negociateAllTiles() {
@@ -201,16 +208,13 @@ class AreaGeneratorFufiller extends Area {
             ArrayList<Tiles.Tile> rearrangeSpots = new ArrayList<Tiles.Tile>();
 
             for (Tiles.Tile potentialRearrangeSpot : potentialRearrangeSpots) {
-                int numThisNeighbors = countBordersToThis(potentialRearrangeSpot);
-                if (numThisNeighbors >= 2) {
+                if (!isAwquadTile(potentialRearrangeSpot)) {
                     rearrangeSpots.add(potentialRearrangeSpot);
                 }
             }
 
-            int countAreas = countBordersToThis(tile);
-
             // 'Aquard' tile
-            if (countAreas < 2 && !rearrangeSpots.isEmpty()) {
+            if (isAwquadTile(tile) && !rearrangeSpots.isEmpty()) {
                 // Find random swap that will work for this tile (Perhaps breaking another though)
                 Tiles.Tile randomSwap = rearrangeSpots.get((int) (Math.random() * rearrangeSpots.size()));
 
@@ -224,6 +228,8 @@ class AreaGeneratorFufiller extends Area {
                         }
                     }
                 }
+
+                if(neighborsFlip.size() == 0) return false;
 
                 Area randomNeighborToFlipFormer = neighborsFlip.get((int) (Math.random() * neighborsFlip.size()));
 
@@ -248,6 +254,12 @@ class AreaGeneratorFufiller extends Area {
 
         return changed;
     }
+
+    private boolean isAwquadTile(Tiles.Tile tile) {
+        int countAreas = countBordersToThis(tile);
+        return countAreas < 2;
+    }
+
 
     public int countBordersToThis(Tiles.Tile tile) {
         Tiles.Tile[] tileNeighbors = tile.getNeighbors();
@@ -284,10 +296,7 @@ class AreaGeneratorFufiller extends Area {
 
         int numTilesItWants = config.numTilesWanted(expandableArea.getTiles().size());
 
-        ArrayList<Tiles.Tile> potentialPotentialExpandTos = getTilesCanExpandTo();
-        int lowestContenders = getLowestContenders(potentialPotentialExpandTos);
-
-        if(lowestContenders == 0 || tiles.size() < numTilesItWants) {
+        if(tiles.size() < numTilesItWants) {
             return true;
         }
         return false;
@@ -330,22 +339,31 @@ class AreaGeneratorFufiller extends Area {
         ArrayList<Tiles.Tile> potentialPotentialExpandTos = getTilesCanExpandTo();
 
         int lowestContenders = getLowestContenders(potentialPotentialExpandTos);
-        System.out.println(lowestContenders);
 
         // Save the tiles that match the lowest contendor
         ArrayList<Tiles.Tile> potentialExpandTos = new ArrayList<Tiles.Tile>();
+        ArrayList<Tiles.Tile> betterPotentialExpandTos = new ArrayList<Tiles.Tile>();
 
         for(Tiles.Tile tile : potentialPotentialExpandTos) {
             int numContenders = numAreaContenders(tile);
 
             if(numContenders == lowestContenders) {
-                potentialExpandTos.add(tile);
+                if(potentialExpandTos.size() == 0) {
+                    potentialExpandTos.add(tile);
+                    if(!isAwquadTile(tile)) {
+                        betterPotentialExpandTos.add(tile);
+                    }
+                }
             }
         }
 
         // Randomly pick from potentialExpandTos
         if(potentialExpandTos.size() > 0) {
             Tiles.Tile expandTo = potentialExpandTos.get((int) (Math.random() * potentialExpandTos.size()));
+
+            if(!betterPotentialExpandTos.isEmpty()) {
+                expandTo = betterPotentialExpandTos.get((int) (Math.random() * betterPotentialExpandTos.size()));
+            }
 
             // Stake the tile
             stakeTile(expandTo);
@@ -375,30 +393,66 @@ class AreaGeneratorFufiller extends Area {
 class SectorGenerator extends Area {
     protected static ArrayList<AreaGeneratorManagerConfig> rooms;
 
+    private int roomCounter;
+    private ArrayList<AreaGeneratorFufiller> roomGenerators;
+
     public SectorGenerator(ArrayList<Tiles.Tile> tiles) {
         super();
+
+        roomCounter = 0;
+        roomGenerators = new ArrayList<AreaGeneratorFufiller>();
+
         addTiles(tiles);
+    }
+
+    public AreaGeneratorManagerConfig getNextRoomConfig() {
+        AreaGeneratorManagerConfig roomConfig = rooms.get(roomCounter);
+
+        return roomConfig;
+    }
+
+    public void newRoom() {
+        AreaGeneratorManagerConfig roomConfig = getNextRoomConfig();
+        roomCounter = (roomCounter+1) % rooms.size();
+
+        AreaGeneratorFufiller roomGenerator = new AreaGeneratorFufiller(roomConfig, this);
+        roomGenerator.generateInitial();
+        roomGenerators.add(roomGenerator);
+    }
+
+    public int getTilesOpen() {
+        int numSpacesOpen = 0;
+        for(Tiles.Tile tile : tiles) {
+            boolean occupied = false;
+            for(Area area : tile.get().getAreas()) {
+                if(area.getClass() == roomGenerators.get(0).getClass()) {
+                    occupied = true;
+                }
+            }
+            if(!occupied) {
+                numSpacesOpen++;
+            }
+        }
+
+        return numSpacesOpen;
     }
 
     public void generate() {
         int estimatedSpaceLeft = tiles.size();
 
         // Requests rooms to be made
-        ArrayList<AreaGeneratorFufiller> roomGenerators = new ArrayList<AreaGeneratorFufiller>();
-        int i = 0;
-        while(estimatedSpaceLeft > 0) {
-            AreaGeneratorManagerConfig roomConfig = rooms.get(i);
-            estimatedSpaceLeft -= roomConfig.numTilesWanted(tiles.size());
-            i = (i+1) % rooms.size();
 
-            AreaGeneratorFufiller roomGenerator = new AreaGeneratorFufiller(roomConfig, this);
-            roomGenerator.generateInitial();
-            roomGenerators.add(roomGenerator);
+        while(estimatedSpaceLeft > 0) {
+            AreaGeneratorManagerConfig roomConfig = getNextRoomConfig();
+            estimatedSpaceLeft -= roomConfig.numTilesWanted(tiles.size());
+            newRoom();
         }
 
         // Colonize africa
         boolean renegotiate = true;
-        while(renegotiate) {
+        int tryTimesBeforeGivesUp = 15;
+        int tryTime = 0;
+        while(renegotiate && tryTime < tryTimesBeforeGivesUp) {
             boolean allColonzied = false;
             while (!allColonzied) {
                 allColonzied = true;
@@ -412,12 +466,31 @@ class SectorGenerator extends Area {
             }
 
             // Finalize borders in africa colonization
+            // Prepare colonization for it to be fair for nations
             for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
-                roomGenerator.negociateAllTiles();
+                roomGenerator.sortTilesByContenders();
+            }
+
+            int j = 0;
+            while(true) {
+                boolean finished = true;
+                for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
+                    if(roomGenerator.getTiles().size() > j) {
+                        Tiles.Tile tile = roomGenerator.getTiles().get(j);
+                        roomGenerator.negociateTile(tile);
+                        finished = false;
+                    }
+                }
+
+                if(finished) break;
+
+                j++;
             }
 
 
-            // Clean up ugly borders
+            // Clean up ugly borders A WIP
+            // TODO:
+            /*
             boolean change = true;
             while (change) {
                 change = false;
@@ -428,16 +501,24 @@ class SectorGenerator extends Area {
                     }
                 }
             }
+             */
 
 
             // If messing with the ugly borders made something below the minimum
             // (Likely when first run), then renegociate
-            renegotiate = false;
-            for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
-                if(!roomGenerator.aboveMinimum()) {
-                    renegotiate = true;
+            if(getTilesOpen() > getNextRoomConfig().numTilesWanted(0)) { //
+                newRoom();
+            } else {
+                renegotiate = false;
+                for (AreaGeneratorFufiller roomGenerator : roomGenerators) {
+                    if (!roomGenerator.aboveMinimum()) {
+                        renegotiate = true;
+                    }
                 }
             }
+
+            tryTime++;
+            System.out.println(tiles.getFirst().getTileset());
         }
     }
 }
